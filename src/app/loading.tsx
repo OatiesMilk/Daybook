@@ -1,0 +1,3 @@
+export default function Loading() {
+  return <main id="main" className="app-main" role="status" aria-label="Loading your workspace"><div className="h-14 border-b border-line" /><div className="page-heading"><div className="h-9 w-64 animate-pulse rounded bg-line" /><div className="mt-4 h-5 w-80 max-w-full animate-pulse rounded bg-line" /></div><div className="panel space-y-5"><div className="h-6 w-40 animate-pulse rounded bg-line" /><div className="h-14 w-64 max-w-full animate-pulse rounded bg-line" /><div className="h-3 w-full animate-pulse rounded bg-line" /></div><span className="sr-only">Loading your workspace…</span></main>;
+}

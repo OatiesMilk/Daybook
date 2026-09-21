@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+.tools/
+.npm-cache/
+.env*
+!.env.example
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+# Personal source documents and generated reports stay out of source control.
+*.docx
+*.pdf
+!templates/dar-template.docx
+.data/
