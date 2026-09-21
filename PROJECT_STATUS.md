@@ -20,7 +20,8 @@
 - Ready requires completed attendance, a complete profile, and at least one complete activity row.
 - Reopening retains earlier snapshots and exports; attendance corrections flag frozen reports for review.
 - Universal filename DAR_LASTNAME_MMDDYY.docx / .pdf; revisions stored in separate private paths.
-- PDF conversion stays on the user's computer. No external converter.
+- PDF generation runs server-side via headless Chromium, self-contained in the app's own Vercel deployment.
+  No third-party conversion service. (Supersedes the earlier local-computer-only PDF constraint.)
 
 ## Implemented
 
@@ -66,9 +67,13 @@
 - Reusable DOCX derived from the user's sample; original unchanged.
 - Landscape layout, watermark, table/field styling retained. Header text normalized for LibreOffice.
 - Dynamic table rows; repeated column headings; normal activity rows kept together across pages.
-- Local LibreOffice PDF conversion with isolated temporary profile, timeout, and cleanup.
+- PDF export now runs server-side (works on Vercel, from any device): a print-styled HTML view of the report
+  snapshot is rendered to PDF via headless Chromium (`puppeteer-core` + `@sparticuz/chromium` on Vercel,
+  `puppeteer`'s bundled browser locally, overridable with `CHROME_PATH`). No document leaves the app's own
+  deployment; there is no third-party conversion service. PDF is generated independently from the report
+  snapshot, not from the archived DOCX, so the two exports no longer share a conversion step.
 - Private Supabase export bucket: authorized owner reads, Ready/Submitted inserts, no client overwrites/deletes.
-- PDF generated from archived DOCX; concurrent upload races return stored bytes.
+- Concurrent upload races return stored bytes (both formats).
 - Universal filenames independent of revision path. Downloads are optional before submission and remain available afterward.
 
 ### Performance
@@ -87,7 +92,7 @@
 - [x] Owner isolation, anonymous/revoked access, blocked self-enrollment.
 - [x] Report prerequisites/transitions, immutable snapshots/files, revision preservation, correction flags, cross-user export access.
 - [x] DOCX filename rules, escaping, adjustable row count, preserved images/layout.
-- [x] Local DOCX-to-PDF conversion: one-page and four-page test reports generated and rendered.
+- [x] Headless-Chromium PDF export: one-page and four-page test reports generated and rendered (valid PDF, correct page counts).
 - [x] Visual export review; fixed clipped source header label and row splitting found during review.
 - [x] Production build passes with new routes.
 - [x] Git whitespace/ignore checks; environment values were not printed or committed.
@@ -109,14 +114,18 @@
 7. Complete Profile, add real attendance, save a report, mark Ready, then confirm submission. Export whenever needed.
 
 Do not rerun migration 001. Existing records are retained. No remote migrations or data changes were performed by the agent.
-LIBREOFFICE_PATH was added to .env.local, preserving connection values. Signed LibreOffice 26.2.6 was extracted into ignored
-.tools/LibreOffice for local conversion, without system-wide installation. New PDF creation on Vercel is intentionally unavailable;
-archived PDFs can be downloaded there after generation on the local app connected to the same Supabase project.
+`LIBREOFFICE_PATH` is no longer used and was removed from `.env.example`; PDF export runs via headless Chromium instead
+(see Exports above). An optional `CHROME_PATH` env var can point at a specific local Chrome/Chromium for dev.
 
 ## Known limits / remaining release work
 
 - Browser end-to-end validation is still required; embedded PostgreSQL is not the hosted Supabase API/storage service.
-- The report template has been checked in LibreOffice rendering; exact Word/LibreOffice font metrics can differ.
+- The DOCX template has been checked in LibreOffice rendering; exact Word/LibreOffice font metrics can differ. The PDF
+  export uses its own independent HTML layout and does not depend on LibreOffice at all.
+- `@sparticuz/chromium` adds real weight to the export function's bundle (tens of MB) and a slower cold start
+  (roughly 1-3s extra) on the first PDF export after an idle period. Not yet measured against Vercel's actual
+  function size/timeout limits on the deployed project — verify after deploying, and check the plan's timeout
+  budget (10s on Hobby) is enough for a cold Chromium launch plus render.
 - ESLint 9 is retained for compatibility with the current Next.js React lint plugin.
 - Work is committed to the local main branch. No push, remote migration, or deployment has been performed.
 
@@ -130,6 +139,7 @@ archived PDFs can be downloaded there after generation on the local app connecte
 - 2026-09-21: Made report exports optional before submission and available afterward.
 - 2026-09-21: Added the paginated All reports page; lint, typecheck, tests, and build pass. Signed-in browser check pending.
 - 2026-09-21: Redesigned the UI for light and dark themes with a theme toggle; checks and build pass. Visual review in a real browser pending.
+- 2026-09-21: Replaced local-only LibreOffice PDF conversion with server-side headless Chromium (`puppeteer-core` + `@sparticuz/chromium`), so PDF export now works on Vercel from any device. Removed `pdf-converter.ts` and `LIBREOFFICE_PATH`; PDF now renders independently from the report snapshot instead of converting the archived DOCX. Lint, typecheck, tests, and production build pass; QA script confirmed valid one-page and two-page PDFs generated locally via headless Chromium. Vercel function bundle size/cold-start timing not yet verified against the deployed project's actual limits.
 - 2026-09-21: Added an In progress state for today’s open attendance (form option, Today card, history labels); no migration. Checks and build pass; browser review pending.
 - 2026-09-21: Unified typography on IBM Plex Sans (removed the serif title font); checks and build pass; visual review pending.
 - 2026-09-21: Redesigned the dashboard (progress hero, Today card, needs-attention list); one extra existing-model read for today’s attendance, no migration. Checks and build pass; browser review pending.

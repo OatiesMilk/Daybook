@@ -2,7 +2,10 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   poweredByHeader: false,
-  outputFileTracingIncludes: { "/api/reports/*/export": ["./templates/dar-template.docx"] },
+  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
+  outputFileTracingIncludes: {
+    "/api/reports/*/export": ["./templates/dar-template.docx", "./node_modules/@sparticuz/chromium/bin/**"],
+  },
   async headers() {
     return [{ source: "/(.*)", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },

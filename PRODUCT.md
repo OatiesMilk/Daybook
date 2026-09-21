@@ -22,7 +22,7 @@ The student saves time in at the start of a workday, can finish the entry later,
 - Preserve attendance calculations, validation, authentication, authorization, database policies, report transitions, and export behavior.
 - New attendance entries suggest 6:30 PM time out; it can be cleared to save time in only. An absent day has no times and earns zero hours.
 - Ready requires completed attendance, a complete profile, and a complete activity row. Corrections may flag frozen reports for review; revisions and earlier exports remain available.
-- New PDF creation uses a local LibreOffice converter. Archived PDFs can be downloaded elsewhere, including on Vercel.
+- PDF creation runs server-side via headless Chromium and works from any device, including Vercel.
 - Do not expose personal report contents or environment secrets.
 
 ## Brand Commitments

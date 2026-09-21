@@ -42,7 +42,7 @@ export function ReportEditor({ report, date, isLatest }: { report: Report | null
     </div>
     {report && <div className="panel space-y-5"><h2 className="section-title">Next step</h2>
       {isLatest && report.status === "draft" && (unsaved ? <p className="muted-copy">Save your activity changes before marking Ready.</p> : <Command report={report} command="ready" label="Mark Ready" primary />)}
-      {report.status !== "draft" && <><div className="flex flex-wrap gap-3"><a className="primary-button" href={`/api/reports/${report.id}/export?format=docx`}>Download DOCX</a><a className="secondary-button" href={`/api/reports/${report.id}/export?format=pdf`}>Download PDF</a></div><p className="muted-copy">Downloads are optional before marking Submitted and remain available afterward. New PDF creation runs on your computer with LibreOffice; an archived PDF can be downloaded elsewhere.</p></>}
+      {report.status !== "draft" && <><div className="flex flex-wrap gap-3"><a className="primary-button" href={`/api/reports/${report.id}/export?format=docx`}>Download DOCX</a><a className="secondary-button" href={`/api/reports/${report.id}/export?format=pdf`}>Download PDF</a></div><p className="muted-copy">Downloads are optional before marking Submitted and remain available afterward.</p></>}
       {isLatest && report.status === "ready" && !report.needs_review && <Command report={report} command="submit" label="Mark Submitted" primary />}
       {isLatest && report.status !== "draft" && <Command report={report} command="reopen" label="Create updated version" />}
       <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline" href={`/attendance?date=${date}`}>Open attendance for this date</Link>

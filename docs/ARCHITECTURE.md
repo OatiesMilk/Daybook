@@ -38,14 +38,17 @@ date, activity fields, prerequisites, and allowed transition. Per-owner database
 - Attendance corrections: flag affected frozen reports for review. Their snapshots and exports stay unchanged.
 
 Exports use `DAR_LASTNAME_MMDDYY` with the format extension. Private object paths are `owner UUID/report UUID/report.docx` or `.pdf`.
-Storage RLS authorizes owner reads and Ready-report inserts, with no client update/delete policy. PDF conversion uses the archived DOCX,
-so a later template change cannot cause PDF/DOCX drift. Concurrent export requests return the winning archived bytes.
+Storage RLS authorizes owner reads and Ready-report inserts, with no client update/delete policy. DOCX is rendered from the DOCX
+template; PDF is rendered independently, straight from the report snapshot, so the two formats never need to agree byte-for-byte.
+Concurrent export requests return the winning archived bytes.
 
-## Local PDF decision
+## PDF generation
 
-The user explicitly chose local conversion. LibreOffice runs with an isolated temporary profile via execFile (no shell interpolation),
-a timeout, and cleanup. No external conversion endpoint is used. Vercel can serve existing PDFs and create DOCX; new PDFs need the local app.
-The template retains the sample's layout and images; rendering checks covered one-page and four-page reports.
+PDF export renders a print-styled HTML view of the report snapshot through headless Chromium (`puppeteer-core`, using
+`@sparticuz/chromium`'s prebuilt binary on Vercel and the `puppeteer` dev dependency's bundled browser locally). No document
+leaves the app's own Vercel deployment or Supabase project — there is no external conversion endpoint. PDF creation, like
+DOCX creation, now works on Vercel and from any device, superseding the earlier local-only-LibreOffice constraint.
+The DOCX template retains the sample's layout and images; rendering checks covered one-page and four-page reports.
 
 ## Verification boundaries
 

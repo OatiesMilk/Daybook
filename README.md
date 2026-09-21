@@ -4,7 +4,7 @@ Next.js + TypeScript + Tailwind + Supabase, designed for Vercel.
 
 The app includes private email/password and Google sign-in, attendance CRUD/history,
 progress totals, Viber message copying, profile settings, daily report revisions, and private DOCX/PDF exports.
-PDF creation runs on your computer using LibreOffice; archived PDFs can subsequently be downloaded on other devices.
+Both formats are generated on the server (PDF via headless Chromium) and work from any device, including on Vercel.
 
 ## Upgrade your existing setup
 
@@ -23,7 +23,6 @@ Migration 005 fixes the ambiguous `owner_id` reference that prevented Ready repo
 Migration 006 lets you mark a Ready report Submitted without first downloading DOCX or PDF. Exports remain available afterward.
 
 Run `npm ci` to install the export dependencies, then restart with `npm run dev`.
-For this workspace, `LIBREOFFICE_PATH` has been added to `.env.local` and LibreOffice was extracted under ignored `.tools/LibreOffice`.
 Your existing Supabase values were preserved. Never commit `.env.local` or `.tools`.
 
 ## Daily workflow
@@ -34,7 +33,7 @@ Your existing Supabase values were preserved. Never commit `.env.local` or `.too
 4. Copy Viber messages from saved attendance. Both office and WFH currently use `@office`.
 5. Open **Reports**, choose a day, enter activity rows, and **Save draft**.
 6. **Mark Ready** after attendance and activities are complete. This freezes a snapshot of the rows, profile, and cumulative hours through that date.
-7. Download DOCX and PDF whenever needed, before or after submission. Exports are archived in private Supabase Storage. PDF is generated locally from the archived DOCX.
+7. Download DOCX and PDF whenever needed, before or after submission, from any device. Exports are archived in private Supabase Storage.
 8. After you actually send the report, check the submission confirmation and **Mark Submitted**. Downloads are optional.
 9. To correct a frozen report, **Reopen as a new draft revision**. Old snapshots and files remain unchanged.
 
@@ -134,30 +133,28 @@ Implementation references: [Supabase server-side auth](https://supabase.com/docs
 [Google sign-in](https://supabase.com/docs/guides/auth/social-login/auth-google),
 and [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
-## Local PDF conversion and template
+## PDF export and template
 
-On another computer, install LibreOffice and set the absolute executable path in `.env.local`, for example:
+PDF export renders a print-styled HTML view of the report snapshot through headless Chromium
+(`puppeteer-core` + `@sparticuz/chromium` in production, the `puppeteer` dev dependency's bundled
+browser locally). No document ever leaves your own Vercel deployment or Supabase project — there is
+no third-party conversion service. Generated files are archived in your private Supabase bucket.
+To use a specific local Chrome/Chromium install instead of `puppeteer`'s bundled one, set `CHROME_PATH`
+in `.env.local`.
 
-```dotenv
-LIBREOFFICE_PATH="C:/Program Files/LibreOffice/program/soffice.exe"
-```
+`templates/dar-template.docx` is the reusable DOCX template derived from the user's sample, with personal
+example content removed. It retains the landscape layout, watermark, table styling, and field formatting.
+The small DAR v2 label is ordinary header text for LibreOffice compatibility; multi-page tables repeat
+column headings and keep ordinary rows together. The original source document remains unchanged and
+ignored by Git. The PDF export uses its own independent HTML layout — it does not depend on this template.
 
-The verified workspace copy is at `.tools/LibreOffice/program/soffice.exe`. It is not a system-wide installation.
-The converter uses a fresh temporary directory/profile for each request and removes it afterward.
-No third-party conversion service receives your documents. Generated files are archived in your private Supabase bucket.
-
-`templates/dar-template.docx` is the reusable template derived from the user's sample, with personal example content removed.
-It retains the landscape layout, watermark, table styling, and field formatting. The small DAR v2 label is ordinary header
-text for LibreOffice compatibility; multi-page tables repeat column headings and keep ordinary rows together.
-The original source document remains unchanged and ignored by Git.
-
-To regenerate the template after editing the original source:
+To regenerate the DOCX template after editing the original source:
 
 ```sh
 python scripts/prepare-template.py DAR_Akia_091726.docx
 ```
 
-Development-only export verification (set `LIBREOFFICE_PATH` in your terminal environment first):
+Development-only export verification:
 
 ```sh
 node --conditions=react-server --experimental-strip-types scripts/verify-exports.ts
@@ -168,8 +165,6 @@ QA artifacts are written under ignored `.data/exports-qa/`.
 
 ## Deployment limits
 
-The web app and DOCX export can run on Vercel. PDF **creation** requires the local app with LibreOffice,
-as requested. PDF **downloads** work on Vercel once a PDF has been archived locally against the same Supabase project.
-A phone cannot create a new PDF through Vercel under this configuration. No public deployment has been performed.
+The web app, DOCX export, and PDF export all run on Vercel and work from any device, including phones.
 
 Before production, complete live browser/mobile verification and the hosted checklist in `PROJECT_STATUS.md`.
