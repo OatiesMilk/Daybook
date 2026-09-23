@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-21T00:00:00Z",
+  "title": "Design System: Daybook",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Action Blue" },
+      "paper": { "role": "neutral", "displayName": "Cool Paper" },
+      "ink": { "role": "neutral", "displayName": "Deep Ink" },
+      "warning-ink": { "role": "warning", "displayName": "Review Amber" }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Page heading", "purpose": "Route titles." },
+      "body": { "displayName": "Body", "purpose": "Forms and explanatory copy." }
+    },
+    "shadows": [
+      { "name": "panel-low", "value": "0 5px 18px -16px #27475b66", "purpose": "Subtle separation of task panels from paper." }
+    ],
+    "motion": [
+      { "name": "control-state", "value": "background-color .16s ease, border-color .16s ease, color .16s ease", "purpose": "Button state transitions; reduced-motion preference overrides duration." }
+    ],
+    "breakpoints": [
+      { "name": "phone-navigation", "value": "700px" },
+      { "name": "history-table", "value": "768px" },
+      { "name": "task-columns", "value": "1024px" }
+    ]
+  },
+  "components": [
+    { "name": "Primary Button", "kind": "button", "refersTo": "button-primary", "description": "Main task action.", "html": "<button class=\"ds-primary\">Save attendance</button>", "css": ".ds-primary{min-height:2.85rem;padding:.65rem 1.05rem;border:1px solid #075985;border-radius:.55rem;background:#075985;color:#fff;font:700 .875rem Segoe UI,Arial,sans-serif;cursor:pointer}.ds-primary:hover{background:#064365}.ds-primary:focus-visible{outline:3px solid #b45b00;outline-offset:3px}" },
+    { "name": "Secondary Button", "kind": "button", "refersTo": "button-secondary", "description": "Supporting action.", "html": "<button class=\"ds-secondary\">View history</button>", "css": ".ds-secondary{min-height:2.85rem;padding:.65rem 1.05rem;border:1px solid #aebfc9;border-radius:.55rem;background:#fff;color:#172b3a;font:700 .875rem Segoe UI,Arial,sans-serif;cursor:pointer}.ds-secondary:hover{background:#edf3f6}.ds-secondary:focus-visible{outline:3px solid #b45b00;outline-offset:3px}" },
+    { "name": "Text Field", "kind": "input", "description": "Default labeled field.", "html": "<label class=\"ds-label\">Project<input class=\"ds-input\" placeholder=\"Project name\"></label>", "css": ".ds-label{display:block;color:#172b3a;font:650 .875rem Segoe UI,Arial,sans-serif}.ds-input{display:block;box-sizing:border-box;width:100%;min-height:2.85rem;margin-top:.45rem;padding:.65rem .8rem;border:1px solid #aebfc9;border-radius:.55rem;background:#fff;color:#172b3a;font:400 1rem Segoe UI,Arial,sans-serif}.ds-input:focus-visible{outline:3px solid #b45b00;outline-offset:3px}" },
+    { "name": "Status", "kind": "chip", "description": "Text-backed record state.", "html": "<span class=\"ds-status\">Unfinished</span>", "css": ".ds-status{display:inline-flex;align-items:center;min-height:1.75rem;padding:.24rem .65rem;border-radius:999px;background:#fff1d6;color:#754c09;font:700 .75rem Segoe UI,Arial,sans-serif}" },
+    { "name": "Panel", "kind": "card", "refersTo": "panel", "description": "Task or context surface.", "html": "<section class=\"ds-panel\"><h2>Record attendance</h2><p>Open a date to continue.</p></section>", "css": ".ds-panel{padding:1.35rem;border:1px solid #d5e0e6;border-radius:.85rem;background:#fff;color:#172b3a;box-shadow:0 5px 18px -16px #27475b66;font-family:Segoe UI,Arial,sans-serif}.ds-panel h2{margin:0;font-size:1.15rem}.ds-panel p{margin:.65rem 0 0;color:#526473}" },
+    { "name": "Navigation", "kind": "nav", "description": "Current route in the workspace rail.", "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Attendance</a><a href=\"#\">History</a></nav>", "css": ".ds-nav{display:flex;flex-wrap:wrap;gap:.2rem}.ds-nav a{display:inline-flex;align-items:center;min-height:2.85rem;padding:.45rem .75rem;border-radius:.5rem;color:#526473;text-decoration:none;font:650 .875rem Segoe UI,Arial,sans-serif}.ds-nav a[aria-current=page]{background:#dceef7;color:#064365}.ds-nav a:hover{background:#edf3f6}.ds-nav a:focus-visible{outline:3px solid #b45b00;outline-offset:3px}" }
+  ],
+  "narrative": {
+    "northStar": "A quiet timetable",
+    "overview": "Dates, states, and next actions stay in a clear personal record. Forms and lists carry the interface without decorative dashboard tiles.",
+    "keyCharacteristics": ["Restrained cool palette", "Text-backed states", "Structured responsive records"],
+    "rules": [{ "name": "State is explicit", "body": "Use words beside state color for worked, unfinished, absent, and report review states.", "section": "colors" }],
+    "dos": ["Keep dates and next actions visible", "Wrap long report text on phones"],
+    "donts": ["Use color as the only state signal", "Hide mobile edit controls inside wide tables"]
+  }
+}

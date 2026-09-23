@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bruce"
+  short_description: "Evidence-first full-stack debugging workflow"
+  default_prompt: "Use $bruce to trace this bug end to end and identify the exact root cause and fix."

@@ -1,0 +1,19 @@
+{
+  "name": "@dtr/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./contracts/*": "./src/contracts/*.ts",
+    "./infrastructure/*": "./src/infrastructure/*.ts",
+    "./infrastructure/supabase/*": "./src/infrastructure/supabase/*.ts",
+    "./ui/*": "./src/ui/*.tsx"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "server-only": "^0.0.1"
+  }
+}
