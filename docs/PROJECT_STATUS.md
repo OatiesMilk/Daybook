@@ -2,8 +2,8 @@
 
 **Project:** Daybook - personal internship attendance and Daily Activity Reports
 **Last updated:** 2026-09-23
-**Current phase:** Attendance and reporting implemented locally; new hosted migrations and live acceptance pending
-**Deployment:** Not deployed
+**Current phase:** Production deployed; hosted migration and remaining live acceptance items pending
+**Deployment:** Vercel production in Seoul (`icn1`), colocated with Supabase Seoul (`ap-northeast-2`)
 
 ## Confirmed requirements
 
@@ -87,6 +87,10 @@
 - Report history fetches only fields shown for the selected date; the main report fetches only its latest revision.
 - Report history and current-report lookups run concurrently once the selected date is known.
 - Dashboard unfinished-attendance lookup fetches only the date and time needed by the view.
+- Production profiling identified region distance, not query complexity, as the main signed-in navigation cost. With Vercel functions in Washington, three measured owner checks took 434-710 ms total (466 ms median). Moving the single function region to Seoul, alongside Supabase, reduced 29 signed-in owner checks to a 57 ms median, 69 ms mean, and 146 ms p95 without weakening `getUser()` verification or the active allowlist.
+- Warm middleware claim verification is normally about 2-3 ms. Occasional cold JWKS/key-fetch outliers remain, but they do not justify weakening session verification.
+- The emitted production trace keeps Chromium/Puppeteer out of every normal page route. Normal page traces are about 1.85-2.29 MB; the isolated export route is about 71.43 MB, including roughly 66.8 MB of compressed Chromium assets.
+- Existing attendance and report primary/unique indexes match the owner/date/revision query shapes. The captured hosted attendance-history query completed in 29 ms; no additional index or caching layer is justified for the current single-user data volume.
 
 ## Verification
 
@@ -109,9 +113,9 @@
 - [ ] Apply migration 007 to hosted Supabase to enable Draft deletion.
 - [ ] Live browser CRUD and export round-trip against hosted database/storage.
 - [ ] Phone/desktop browser visual, light and dark theme review, and interaction checks (no browser connection available to automation).
-- [ ] Measure signed-in page loads and navigation against hosted Supabase; anonymous local requests cannot establish the private-data bottleneck.
+- [x] Measured signed-in production navigation against hosted Supabase and colocated Vercel functions with Supabase in Seoul; owner authorization median fell from 466 ms to 57 ms while preserving both checks.
 - [ ] Password recovery UI before production release; account administration currently uses Supabase.
-- [ ] Production deployment and production auth/redirect validation.
+- [x] Production deployment and signed-in navigation validation on Vercel; automated tests continue to cover anonymous and revoked-user denial.
 
 ## Required setup to use this increment
 
@@ -135,15 +139,15 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Import UI browser validation against an authenticated Supabase session is still required; automated browser access was unavailable locally.
 - The DOCX template has been checked in LibreOffice rendering; exact Word/LibreOffice font metrics can differ. The PDF
   export uses its own independent HTML layout and does not depend on LibreOffice at all.
-- `@sparticuz/chromium` adds real weight to the export function's bundle (tens of MB) and a slower cold start
-  (roughly 1-3s extra) on the first PDF export after an idle period. Not yet measured against Vercel's actual
-  function size/timeout limits on the deployed project — verify after deploying, and check the plan's timeout
-  budget (10s on Hobby) is enough for a cold Chromium launch plus render.
+- `@sparticuz/chromium` is isolated to the export function. Its emitted trace is about 71.43 MB, including roughly
+  66.8 MB of compressed Chromium assets; normal page traces contain no Chromium/Puppeteer references. A cold
+  production PDF export still needs runtime timing against the active Vercel timeout budget.
 - ESLint 9 is retained for compatibility with the current Next.js React lint plugin.
-- Work is committed to the local main branch. No push, remote migration, or deployment has been performed.
+- Production deploys from GitHub `main`; no remote migrations were performed by the agent.
 
 ## Change log
 
+- 2026-09-23: Profiled signed-in production navigation before optimizing. Vercel functions were in Washington while Supabase was in Seoul, making the required `getUser()` plus allowlist chain take 434-710 ms (466 ms median across three baseline samples). Configured Vercel's single function region as Seoul (`icn1`); 29 post-change samples measured a 57 ms median, 69 ms mean, and 146 ms p95. Auth checks and denial behavior remain unchanged. Temporary timing logs were removed. Bundle tracing also confirmed Chromium is isolated to the 71.43 MB export route, and the captured attendance-history query completed in 29 ms, so no speculative query/index/cache changes were added.
 - 2026-09-23: Added a compact live Philippine date/time indicator beside the Daybook identity. It updates without animation, uses tabular time figures, and preserves responsive header wrapping. ESLint and TypeScript pass.
 - 2026-09-23: Changed the report editor heading from an ISO date to a timezone-safe long date such as `September 23, 2026`, while preserving the ISO value semantically and internally. ESLint, TypeScript, and focused report tests pass.
 - 2026-09-23: Moved saved-Draft downloads into the editor toolbar, right-aligned on wider screens and wrapped on phones. Download controls disappear when edits are unsaved; lifecycle actions remain in Next step. ESLint, TypeScript, and the production build pass.
