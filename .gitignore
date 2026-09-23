@@ -12,5 +12,5 @@ playwright-report/
 # Personal source documents and generated reports stay out of source control.
 *.docx
 *.pdf
-!templates/dar-template.docx
+!apps/web/templates/dar-template.docx
 .data/
