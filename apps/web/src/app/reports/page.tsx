@@ -7,7 +7,7 @@ import { ReportEditor } from "@dtr/reports/presentation/editor";
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ date?: string; id?: string; page?: string; saved?: string; deleted?: string }> }) {
   const params = await searchParams;
   const { date, error, revisions, report, page, history } = await reportsData(params);
-  return <main id="main" className="app-main app-main-wide"><WorkspaceHeader />
+  return <main id="main" className="app-main"><WorkspaceHeader />
     <div className="page-heading"><h1>Daily activity reports</h1><p>Write activities, review the snapshot, then mark the report submitted after sending it.</p></div>
     <form className="mb-6 flex flex-wrap items-end gap-3"><label className="w-full max-w-56">Report date<input name="date" type="date" required max={internshipToday()} defaultValue={date} /></label><button className="secondary-button">Open report</button><Link href="/reports/all" className="secondary-button">All reports</Link></form>
     {params.saved && <p role="status" className="notice mb-4" data-tone="success">Report updated.</p>}
