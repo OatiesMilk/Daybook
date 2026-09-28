@@ -46,6 +46,7 @@
 - Optimistic timestamp checks reject stale update/delete operations.
 - Date-range/location/status filters and paginated history.
 - Dashboard: hours-recorded hero with quarter milestones, worked days, remaining hours, average worked day and estimated worked days left; a Today card that shows today’s attendance state and next action; earlier unfinished days with an all-caught-up state; shortcuts to reports and history.
+- Today card includes a compact activity-report section on weekdays: latest saved status, nonblank saved activity count, and Start report/Continue draft/Open ready report/View report/Review report action. Open attendance includes a write-now/finalize-after-time-out hint. The report link is secondary and attendance remains the primary action. Desktop top cards share the tallest content-driven height with the attendance action bottom-aligned; mobile cards stack at natural heights. Shortcuts form a full-width responsive strip. Needs attention is a full-width panel only for unfinished earlier entries; otherwise a compact attendance-caught-up message appears. One owner/date-scoped, latest-revision report query runs alongside existing dashboard reads; no migration or new dependency.
 - In progress: an open entry is In progress on its own date and Unfinished on any earlier date (derived from the date, no schema change). The form has an In progress checkbox for today; the Today card and history show the label.
 - Copy saved Viber login/logout messages with manual-copy fallback.
 
@@ -121,7 +122,7 @@
 
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
-- [x] Twenty-nine automated test groups passed (includes reminder badge/preferences/corrupt-storage rules, 18:20 timing and DAR lifecycle/review states, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, and all-reports behavior).
+- [x] Thirty automated test groups passed (includes today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, and all-reports behavior).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
 - [x] Owner isolation, anonymous/revoked access, blocked self-enrollment.
@@ -178,6 +179,10 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Open signup depends operationally on hosted Auth configuration: Confirm Email, production SMTP, password policy, Turnstile, the token-hash email template, and exact redirect URLs.
 
 ## Change log
+
+- 2026-09-28: Balanced the dashboard's desktop card heights, bottom-aligned the Today attendance action, replaced the tall shortcut panel with a responsive full-width strip, and reduced the empty attendance alert to a small caught-up message. Design-engineering/mobile-native guidance informed alignment, natural mobile sizing, and capability-gated shortcut hover. Lint, TypeScript, all 30 tests, and production build pass; real-phone and live visual acceptance remain pending. No database changes or dependencies.
+
+- 2026-09-28: Added today's activity-report status/count/action inside the Today card and reduced forced vertical whitespace. Reports presentation is composed by the web app into the attendance card without crossing feature infrastructure boundaries. Design-engineering guidance shaped the compact section and action hierarchy. Lint, TypeScript, all 30 tests, and production build pass; live desktop/mobile visual acceptance remains pending.
 
 - 2026-09-28: Replaced the intermediate More page with an inline desktop dropdown/mobile upward menu, direct record/account links, current-page indicators, light dismissal, and keyboard navigation. Native-mobile/design-engineering guidance informed touch sizes, capability-gated hover, bounded scrolling, and instant keyboard interactions. Old `/more` URL redirects Home. Lint, TypeScript, all 29 tests, and production build pass; real-phone and live browser keyboard/interaction checks remain pending.
 

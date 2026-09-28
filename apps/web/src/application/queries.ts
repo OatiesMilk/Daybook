@@ -2,7 +2,7 @@ import "server-only";
 import { requireOwner } from "@dtr/identity/application/auth";
 import { attendanceReminders, completionEstimate, internshipClockMinutes, internshipToday, isWorkday, reminderWindow, validateWorkday } from "@dtr/attendance/domain/index";
 import { attendanceForMonth, attendanceSummary, findAttendance, listAttendance, openAttendance, recentWorkedAttendance } from "@dtr/attendance/infrastructure/repository";
-import { getReport, listAllReports, reminderReportsForRange, reportHistory, reportsForDate, reportsForMonth, type AllReportsFilters } from "@dtr/reports/infrastructure/repository";
+import { getReport, listAllReports, reminderReportsForRange, reportHistory, reportsForDate, reportsForMonth, todayReport, type AllReportsFilters } from "@dtr/reports/infrastructure/repository";
 import { calendarMonthBounds, parseCalendarMonth } from "@dtr/reports/domain/calendar";
 import { getProfile } from "@dtr/identity/infrastructure/profile-repository";
 import { parsePage } from "@dtr/reports/domain/rules";
@@ -14,14 +14,15 @@ const parseIsoDate = (value?: string) => value && /^\d{4}-\d{2}-\d{2}$/.test(val
 export async function dashboardData() {
   const { supabase, user } = await requireOwner();
   const today = internshipToday(); const workday = isWorkday(today);
-  const [summary, open, record, profile, recent] = await Promise.all([
+  const [summary, open, record, profile, recent, report] = await Promise.all([
     attendanceSummary(supabase, today), openAttendance(supabase, user.id),
     workday ? findAttendance(supabase, user.id, today) : Promise.resolve(null),
     getProfile(supabase, user.id),
     recentWorkedAttendance(supabase, user.id, today),
+    workday ? todayReport(supabase, user.id, today) : Promise.resolve(null),
   ]);
   const targetHours = profile?.target_hours ?? null;
-  return { today, workday, summary, open, record, targetHours, estimate: targetHours == null ? null : completionEstimate(today, summary.minutes, targetHours, recent) };
+  return { today, workday, summary, open, record, report, targetHours, estimate: targetHours == null ? null : completionEstimate(today, summary.minutes, targetHours, recent) };
 }
 
 export async function notificationData() {

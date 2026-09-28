@@ -5,6 +5,12 @@ import type { ActivityRow, Report } from "../domain/rules";
 import { latestReportPerDate, type CalendarReport } from "../domain/calendar";
 
 type Client = SupabaseClient<Database>;
+export async function todayReport(db: Client, owner: string, date: string) {
+  const { data, error } = await db.from("reports").select("id,status,needs_review,rows")
+    .eq("user_id", owner).eq("report_date", date).order("revision", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw new Error("Could not load today's report. Please retry.");
+  return data;
+}
 export async function getReport(db: Client, owner: string, id: string) {
   const { data, error } = await db.from("reports").select("*").eq("user_id", owner).eq("id", id).maybeSingle();
   if (error) throw new Error("Could not load the report. Check that the reports migration has been applied.");

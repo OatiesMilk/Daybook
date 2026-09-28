@@ -107,12 +107,22 @@ fieldset:disabled { opacity: .7; }
 .record-row:first-child { padding-top: 0; }
 .record-row:last-child { padding-bottom: 0; }
 .shortcut-grid { display: grid; gap: .6rem; }
-.shortcut-link { display: flex; align-items: center; gap: .85rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--surface); padding: .8rem .9rem; transition: border-color .15s ease, background-color .15s ease, transform .15s ease; }
-.shortcut-link:hover { border-color: var(--accent); background: var(--row-hover); transform: translateX(2px); }
+.dashboard-shortcuts .shortcut-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.shortcut-link { display: flex; height: 100%; align-items: center; gap: .85rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--surface); padding: .8rem .9rem; touch-action: manipulation; transition: border-color .15s ease, background-color .15s ease; }
+.shortcut-link:active { background: var(--surface-soft); border-color: var(--accent); }
 .shortcut-icon { display: grid; flex: none; place-items: center; width: 2.35rem; height: 2.35rem; border-radius: .55rem; background: var(--surface-soft); color: var(--accent); }
 .shortcut-label { flex: 1; font-size: .9rem; font-weight: 600; color: var(--ink); }
 .shortcut-arrow { flex: none; color: var(--muted); transition: transform .15s ease, color .15s ease; }
-.shortcut-link:hover .shortcut-arrow { transform: translateX(3px); color: var(--accent); }
+@media (hover: hover) and (pointer: fine) {
+  .shortcut-link:hover { border-color: var(--accent); background: var(--row-hover); }
+  .shortcut-link:hover .shortcut-arrow { transform: translateX(3px); color: var(--accent); }
+}
+@media (min-width: 1024px) {
+  .dashboard-shortcuts .shortcut-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .dashboard-shortcuts .shortcut-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .workspace-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line-strong); padding-bottom: 1rem; }
 .workspace-identity { display: flex; min-width: 0; align-items: center; gap: 1rem; }
 .current-date-time { display: flex; min-width: 8.5rem; align-items: center; gap: .65rem; border-left: 1px solid var(--line); padding-left: 1rem; color: var(--ink); }
