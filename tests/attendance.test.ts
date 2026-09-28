@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { attendanceState, calculateAttendance, internshipToday, isWorkday, pace, parseTime, TARGET_MINUTES } from "../packages/attendance/src/domain/index.ts";
+import { attendanceState, calculateAttendance, internshipToday, isWorkday, pace, parseTime } from "../packages/attendance/src/domain/index.ts";
 
 const credit = (timeIn: string, timeOut: string, overtime = false, date = "2026-09-18") =>
   calculateAttendance({ date, timeIn, timeOut, overtime });
@@ -43,10 +43,9 @@ test("workday check and pace projection for the dashboard", () => {
   assert.equal(isWorkday("2026-09-21"), true);
   assert.equal(isWorkday("2026-09-19"), false);
   assert.equal(isWorkday("not-a-date"), false);
-  assert.equal(pace(0, 0), null);
-  assert.deepEqual(pace(3000, 6), { averageMinutes: 500, daysLeft: 53 });
+  assert.equal(pace(0, 0, 6000), null);
   assert.deepEqual(pace(3000, 6, 6000), { averageMinutes: 500, daysLeft: 6 });
-  assert.equal(pace(TARGET_MINUTES, 50)?.daysLeft, 0);
+  assert.equal(pace(29160, 50, 29160)?.daysLeft, 0);
 });
 
 test("open attendance is in progress today and unfinished on earlier days", () => {

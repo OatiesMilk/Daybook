@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@dtr/shared/infrastructure/database.types";
 import type { ActivityRow, Report } from "../domain/rules";
+import { latestReportPerDate, type CalendarReport } from "../domain/calendar";
 
 type Client = SupabaseClient<Database>;
 export async function getReport(db: Client, owner: string, id: string) {
@@ -32,6 +33,13 @@ export async function listAllReports(db: Client, owner: string, page: number, fi
   const { data, count, error } = await query.order("report_date", { ascending: false }).order("revision", { ascending: false }).range(start, start + ALL_REPORTS_PAGE_SIZE - 1);
   if (error) throw new Error("Could not load reports. Apply the reports migration first.");
   return { reports: data ?? [], count: count ?? 0 };
+}
+export async function reportsForMonth(db: Client, owner: string, from: string, to: string) {
+  const { data, error } = await db.from("reports").select("id,report_date,revision,status,needs_review")
+    .eq("user_id", owner).gte("report_date", from).lte("report_date", to)
+    .order("report_date", { ascending: true }).order("revision", { ascending: false });
+  if (error) throw new Error("Could not load the report calendar. Please retry.");
+  return latestReportPerDate((data ?? []) as CalendarReport[]);
 }
 export async function commandReport(db: Client, args: { command: string; work_day: string; report_id?: string; expected_version?: string; activity_rows?: ActivityRow[] }) {
   const { data, error } = await db.rpc("report_command", args);

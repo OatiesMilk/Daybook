@@ -1,18 +1,19 @@
 # Project Status
 
-**Project:** Daybook - personal internship attendance and Daily Activity Reports
-**Last updated:** 2026-09-23
-**Current phase:** Production deployed; hosted migration and remaining live acceptance items pending
+**Project:** Daybook - multi-tenant internship attendance and Daily Activity Reports
+**Last updated:** 2026-09-28
+**Current phase:** Open-signup and calendar implementation complete locally; hosted migration/configuration and live acceptance pending
+**Current signup rollout:** Google registration; email registration disabled by default until SMTP is available. Existing password sign-in remains available.
 **Deployment:** Vercel production in Seoul (`icn1`), colocated with Supabase Seoul (`ap-northeast-2`)
 
 ## Confirmed requirements
 
-- Personal use on phone and desktop, email/password and Google sign-in.
+- Open self-serve use on phone and desktop, with private per-student workspaces and email/password or Google sign-in.
 - Next.js, TypeScript, Tailwind, Supabase, Vercel; clean symmetric monorepo boundaries.
 - One time-in/time-out pair per weekday; office/WFH; no overnight work or future attendance dates.
 - Save time in alone, then complete time out. Open entries earn no hours.
 - Regular credit: overlap with 08:30-12:00 and 13:00-18:30. Optional overtime counts actual work after 18:30.
-- Configurable per-user internship target, defaulting to 486 hours. No opening balance. Historical records are entered individually.
+- Configurable per-user internship target, required during first-time profile setup. No opening balance. Historical records are entered individually.
 - Sample reconciliation: 62h 30m through September 17, 2026.
 - Date/time corrections allowed; duplicate dates rejected; deletion requires confirmation.
 - Viber copied messages use @office for both locations.
@@ -28,7 +29,9 @@
 ### Foundation and architecture
 
 - Next.js App Router, strict TypeScript, Tailwind, typed database contracts, CI configuration.
-- Password/Google sign-in, SSR cookies, callback, logout, verified owner guard, active allowlist.
+- Self-serve password signup with email confirmation, Google signup/sign-in, SSR cookies, separate PKCE/confirmation callbacks, logout, verified owner guard, and a suspendable active-access row.
+- New Auth identities are automatically provisioned with an active `allowed_users` row and blank profile by migration 009. Conflict-safe backfill preserves existing profiles and suspensions.
+- Signup responses preserve Supabase's account-enumeration protection. Cloudflare Turnstile is supported without an added application dependency.
 - npm-workspaces monorepo: `apps/web` is the single deployable composition root; attendance, reports, identity, and shared code are isolated packages.
 - Symmetric feature layers separate domain, application, infrastructure, and presentation concerns without introducing a second BFF deployment.
 - Credentials, original sample, local tools, and QA artifacts are ignored by Git.
@@ -64,6 +67,13 @@
 - The latest Draft revision can be permanently deleted after explicit confirmation. Ready, Submitted, older, and stale revisions remain protected by the database command.
 - Import safety: 4 MB upload cap, content/extension checks, bounded DOCX ZIP expansion and XML, no filesystem extraction, and isolated PDF parsing with page/text/memory/time limits. Ambiguous statuses and blank Project cells are surfaced for explicit review.
 
+### Calendar
+
+- `/calendar` provides a dependency-free month grid with Today/previous/next navigation.
+- Each date shows the latest saved revision's Draft, Ready, Submitted, or Needs review state using the existing status badges.
+- Past and current weekdays link directly to `/reports?date=YYYY-MM-DD`; weekends and future dates remain noninteractive because the report model rejects them.
+- Month reads are owner-scoped, range-bounded, and select only the fields needed by the calendar.
+
 ### Visual design
 
 - Token-based light and dark themes (`apps/web/src/app/globals.css`): system-following by default, header/login toggle with saved choice and no-flash script. Ink-blue accent, cool mineral paper, flat paper background. One typeface (IBM Plex Sans via next/font) for the whole UI. No hardcoded colours remain in components. Contrast checked numerically (text 4.5:1, borders/focus 3:1).
@@ -90,13 +100,13 @@
 - Production profiling identified region distance, not query complexity, as the main signed-in navigation cost. With Vercel functions in Washington, three measured owner checks took 434-710 ms total (466 ms median). Moving the single function region to Seoul, alongside Supabase, reduced 29 signed-in owner checks to a 57 ms median, 69 ms mean, and 146 ms p95 without weakening `getUser()` verification or the active allowlist.
 - Warm middleware claim verification is normally about 2-3 ms. Occasional cold JWKS/key-fetch outliers remain, but they do not justify weakening session verification.
 - The emitted production trace keeps Chromium/Puppeteer out of every normal page route. Normal page traces are about 1.85-2.29 MB; the isolated export route is about 71.43 MB, including roughly 66.8 MB of compressed Chromium assets.
-- Existing attendance and report primary/unique indexes match the owner/date/revision query shapes. The captured hosted attendance-history query completed in 29 ms; no additional index or caching layer is justified for the current single-user data volume.
+- Existing attendance and report primary/unique indexes match the owner/date/revision query shapes. The captured hosted attendance-history query completed in 29 ms; no additional index or caching layer is currently justified.
 
 ## Verification
 
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
-- [x] Twenty-two automated test groups passed (includes Draft preview validation, monorepo boundary enforcement, report-import round trips and adversarial files, all-reports ordering/pagination/owner scoping, dashboard pace/workday helpers, and the in-progress rule).
+- [x] Twenty-four automated test groups passed (includes automatic provisioning/suspension, cross-user RLS, calendar month logic/latest-revision selection, Draft preview validation, monorepo boundaries, report-import safety, all-reports behavior, dashboard pace helpers, and the in-progress rule).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
 - [x] Owner isolation, anonymous/revoked access, blocked self-enrollment.
@@ -107,7 +117,9 @@
 - [x] Headless-Chromium PDF export: one-page and four-page test reports generated and rendered (valid PDF, correct page counts).
 - [x] Visual export review; fixed clipped source header label and row splitting found during review.
 - [x] Production build passes with new routes.
+- [x] Local production build includes `/signup`, `/auth/confirm`, and `/calendar`.
 - [ ] Apply migration 008 to hosted Supabase to enable configurable internship targets.
+- [x] User reports migration 009 applied to hosted Supabase; independent hosted verification pending.
 - [x] Git whitespace/ignore checks; environment values were not printed or committed.
 - [x] Migration 006 applied to hosted Supabase by the user.
 - [ ] Apply migration 007 to hosted Supabase to enable Draft deletion.
@@ -115,6 +127,8 @@
 - [ ] Phone/desktop browser visual, light and dark theme review, and interaction checks (no browser connection available to automation).
 - [x] Measured signed-in production navigation against hosted Supabase and colocated Vercel functions with Supabase in Seoul; owner authorization median fell from 466 ms to 57 ms while preserving both checks.
 - [ ] Password recovery UI before production release; account administration currently uses Supabase.
+- [ ] Configure hosted Confirm Email, the token-hash confirmation template, custom SMTP, Turnstile, password policy, and exact redirect allowlist.
+- [ ] Complete a hosted two-account isolation test and verify that setting `allowed_users.active = false` cuts off access without deleting data.
 - [x] Production deployment and signed-in navigation validation on Vercel; automated tests continue to cover anonymous and revoked-user denial.
 
 ## Required setup to use this increment
@@ -126,8 +140,10 @@
 5. Apply 202609210006_optional_report_exports.sql once to make downloads optional before submission.
 6. Apply 202609210007_delete_report_drafts.sql once to allow deletion of the latest Draft revision.
 7. Apply 202609210008_profile_target_hours.sql once to add configurable required internship hours.
-8. Run npm ci and restart npm run dev.
-9. Complete Profile, add real attendance, save a report, mark Ready, then confirm submission. Export whenever needed.
+8. Apply 202609280009_open_signup_provisioning.sql once to enable automatic signup provisioning.
+9. Configure the Supabase Auth settings and Turnstile environment variable documented in README.md.
+10. Run npm ci and restart npm run dev.
+11. Sign up, confirm email, complete Profile, add real attendance, save a report, mark Ready, then confirm submission. Export whenever needed.
 
 Do not rerun migration 001. Existing records are retained. No remote migrations or data changes were performed by the agent.
 `LIBREOFFICE_PATH` is no longer used and was removed from `apps/web/.env.example`; PDF export runs via headless Chromium instead
@@ -144,8 +160,13 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
   production PDF export still needs runtime timing against the active Vercel timeout budget.
 - ESLint 9 is retained for compatibility with the current Next.js React lint plugin.
 - Production deploys from GitHub `main`; no remote migrations were performed by the agent.
+- Open signup depends operationally on hosted Auth configuration: Confirm Email, production SMTP, password policy, Turnstile, the token-hash email template, and exact redirect URLs.
 
 ## Change log
+
+- 2026-09-28: User selected Google signup for the initial rollout while SMTP is unavailable. Signup page and server action now gate email registration on `EMAIL_SIGNUP_ENABLED=true`; default is false. Existing password sign-in remains available. Hosted migration 009 application was reported by the user. Lint, TypeScript, all 24 tests, and production build pass for this rollout change.
+
+- 2026-09-28: Pivoted Daybook from a manually provisioned personal app to an open multi-tenant product. Added self-serve signup, SSR email confirmation, conflict-safe Auth-trigger provisioning, suspendable access, first-run target/profile setup, enumeration-safe responses, Turnstile support, and updated operating documentation. Added a dependency-free report calendar with owner-scoped monthly status data and direct report-editor links. Lint, TypeScript, 24 tests, and the production build pass; hosted Auth configuration and two-account live acceptance remain pending.
 
 - 2026-09-23: Profiled signed-in production navigation before optimizing. Vercel functions were in Washington while Supabase was in Seoul, making the required `getUser()` plus allowlist chain take 434-710 ms (466 ms median across three baseline samples). Configured Vercel's single function region as Seoul (`icn1`); 29 post-change samples measured a 57 ms median, 69 ms mean, and 146 ms p95. Auth checks and denial behavior remain unchanged. Temporary timing logs were removed. Bundle tracing also confirmed Chromium is isolated to the 71.43 MB export route, and the captured attendance-history query completed in 29 ms, so no speculative query/index/cache changes were added.
 - 2026-09-23: Added a compact live Philippine date/time indicator beside the Daybook identity. It updates without animation, uses tabular time figures, and preserves responsive header wrapping. ESLint and TypeScript pass.

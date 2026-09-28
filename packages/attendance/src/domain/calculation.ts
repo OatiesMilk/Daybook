@@ -1,5 +1,4 @@
 /** Local wall-clock times. No timezone conversion or fractional-hour arithmetic. */
-export const TARGET_MINUTES = 486 * 60;
 export const INTERNSHIP_TIME_ZONE = "Asia/Manila";
 
 export type AttendanceInput = {
@@ -60,7 +59,7 @@ export function isWorkday(value: string): boolean {
 }
 
 /** Average credit per worked day, and how many more worked days the remaining target needs at that average. Null until a day is worked. */
-export function pace(totalMinutes: number, workedDays: number, targetMinutes = TARGET_MINUTES): { averageMinutes: number; daysLeft: number } | null {
+export function pace(totalMinutes: number, workedDays: number, targetMinutes: number): { averageMinutes: number; daysLeft: number } | null {
   if (workedDays <= 0 || totalMinutes <= 0) return null;
   const average = totalMinutes / workedDays;
   return { averageMinutes: Math.round(average), daysLeft: Math.ceil(Math.max(0, targetMinutes - totalMinutes) / average) };

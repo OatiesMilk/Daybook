@@ -2,7 +2,8 @@ import "server-only";
 import { requireOwner } from "@dtr/identity/application/auth";
 import { internshipToday, isWorkday, validateWorkday } from "@dtr/attendance/domain/index";
 import { attendanceSummary, findAttendance, listAttendance, openAttendance } from "@dtr/attendance/infrastructure/repository";
-import { getReport, listAllReports, reportHistory, reportsForDate, type AllReportsFilters } from "@dtr/reports/infrastructure/repository";
+import { getReport, listAllReports, reportHistory, reportsForDate, reportsForMonth, type AllReportsFilters } from "@dtr/reports/infrastructure/repository";
+import { calendarMonthBounds, parseCalendarMonth } from "@dtr/reports/domain/calendar";
 import { getProfile } from "@dtr/identity/infrastructure/profile-repository";
 import { parsePage } from "@dtr/reports/domain/rules";
 
@@ -18,7 +19,7 @@ export async function dashboardData() {
     workday ? findAttendance(supabase, user.id, today) : Promise.resolve(null),
     getProfile(supabase, user.id),
   ]);
-  return { today, workday, summary, open, record, targetHours: profile?.target_hours ?? 486 };
+  return { today, workday, summary, open, record, targetHours: profile?.target_hours ?? null };
 }
 
 export async function attendanceData(requestedDate?: string) {
@@ -60,6 +61,14 @@ export async function allReportsData(params: { page?: string; from?: string; to?
   if (filters.from && filters.to && filters.from > filters.to) return { page, filters, error: "The From date must be on or before the To date.", reports: [], count: 0, retryable: false };
   try { return { page, filters, error: "", retryable: false, ...await listAllReports(supabase, user.id, page, filters) }; }
   catch (cause) { return { page, filters, error: cause instanceof Error ? cause.message : "Could not load reports.", reports: [], count: 0, retryable: true }; }
+}
+
+export async function calendarData(requestedMonth?: string) {
+  const { supabase, user } = await requireOwner();
+  const today = internshipToday();
+  const month = parseCalendarMonth(requestedMonth, today);
+  const { from, to } = calendarMonthBounds(month);
+  return { today, month, reports: await reportsForMonth(supabase, user.id, from, to) };
 }
 
 export async function profileData() {

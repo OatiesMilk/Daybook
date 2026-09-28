@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Daybook · Internship tracker",
-  description: "Your personal internship attendance and daily activity reports.",
+  description: "Private internship attendance, progress, and daily activity reports for every student.",
   robots: { index: false, follow: false },
 };
 

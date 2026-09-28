@@ -1,9 +1,9 @@
-# Daybook · Personal internship tracker
+# Daybook · Private internship tracker for students
 
 Next.js + TypeScript + Tailwind + Supabase, designed for Vercel.
 
-The app includes private email/password and Google sign-in, attendance CRUD/history,
-progress totals, Viber message copying, profile settings, daily report revisions, reviewed DOCX/PDF imports, and private DOCX/PDF exports.
+The app is an open multi-tenant product with self-serve email/password and Google signup, per-student data isolation, attendance CRUD/history,
+calendar navigation, configurable progress targets, Viber message copying, profile settings, daily report revisions, reviewed DOCX/PDF imports, and private DOCX/PDF exports.
 Both formats are generated on the server (PDF via headless Chromium) and work from any device, including on Vercel.
 
 ## Upgrade your existing setup
@@ -16,18 +16,22 @@ Supabase SQL Editor (copy the complete contents of each file into a new query an
 3. `supabase/migrations/202609210004_absences.sql`
 4. `supabase/migrations/202609210005_report_submit_owner_id.sql`
 5. `supabase/migrations/202609210006_optional_report_exports.sql`
+6. `supabase/migrations/202609210007_delete_report_drafts.sql`
+7. `supabase/migrations/202609210008_profile_target_hours.sql`
+8. `supabase/migrations/202609280009_open_signup_provisioning.sql`
 
 Do not rerun `202609180001_foundation.sql` if you already applied it. The new migrations retain existing records.
 The reports migration also creates the private `dar-exports` storage bucket and its access policies.
 Migration 005 fixes the ambiguous `owner_id` reference that prevented Ready reports from being marked Submitted in Supabase.
 Migration 006 lets you mark a Ready report Submitted without first downloading DOCX or PDF. Exports remain available afterward.
+Migration 009 enables automatic account/profile provisioning for open signup and makes each new student choose an internship target.
 
 Run `npm ci` to install the export dependencies, then restart with `npm run dev`.
 Your existing Supabase values were preserved. Never commit `apps/web/.env.local` or `.tools`.
 
 ## Daily workflow
 
-1. Open **Profile** and save your name, last name, school, department/team, and required internship hours. Existing profiles default to 486 hours.
+1. After verifying your email, open **Profile** and save your name, last name, school, department/team, and required internship hours.
 2. Open **Attendance**, choose a weekday, and save your times. New entries suggest 6:30 PM for time out; clear it to save time in only. Select office/WFH and overtime as needed, or mark the day absent for zero hours.
 3. Use **History** to edit the date/times, change an absence to attendance, or delete an entry with confirmation. Only completed worked entries earn credit.
 4. Copy Viber messages from saved attendance. Both office and WFH currently use `@office`.
@@ -37,6 +41,7 @@ Your existing Supabase values were preserved. Never commit `apps/web/.env.local`
 7. **Mark Ready** after attendance and activities are complete. This freezes a snapshot of the rows, profile, and cumulative hours through that date. Ready and Submitted downloads are archived in private Supabase Storage.
 8. After you actually send the report, check the submission confirmation and **Mark Submitted**. Downloads are optional.
 9. To correct a frozen report, **Reopen as a new draft revision**. Old snapshots and files remain unchanged.
+10. Use **Calendar** to see the latest report status for each day and open or start a report for any eligible weekday.
 
 Attendance changes flag Ready/Submitted reports on or after the affected date for review.
 Universal filenames are `DAR_LASTNAME_MMDDYY.docx` and `.pdf`, for example `DAR_AKIA_091726.docx`.
@@ -64,7 +69,7 @@ npm ci
 ```
 
 Copy `apps/web/.env.example` to `apps/web/.env.local` and configure the values below. Without them, the app
-shows a setup page and the calculator, with no personal records or pretend login.
+shows a setup page and the calculator, with no student records or pretend login.
 
 ```sh
 npm run dev
@@ -74,43 +79,48 @@ Open http://localhost:3000. Do not use a development server as a production depl
 
 ## Supabase setup
 
-Use a dedicated Supabase project for this personal app.
+### Current rollout: Google signup
 
-1. Apply all eight files in `supabase/migrations/` in filename order, once each, using the Supabase SQL editor
+Registration currently uses Google. `EMAIL_SIGNUP_ENABLED` defaults to false; existing accounts can still sign in with a password. Keep Supabase's global **Allow new users to sign up** enabled, enable the Google provider, and configure the exact `/auth/callback` redirect URL and matching app `SITE_URL`. SMTP and email-template setup below can wait until email registration is enabled.
+
+The app flag controls the signup page and server action. It does not disable Supabase's direct email signup endpoint. To disable email registration there while retaining existing password sign-in, disable **email signup** in the Email provider if that separate setting is available; keep the global signup setting enabled for Google.
+
+### Future email registration setup
+
+Use a dedicated Supabase project for Daybook.
+
+1. Apply all nine files in `supabase/migrations/` in filename order, once each, using the Supabase SQL editor
    (or your normal Supabase migration workflow). Keep subsequent changes in new migrations.
-2. In Authentication → Users, create your email/password user with a strong password and a verified email.
-   Use the same email as the Google account you intend to use. Copy the user's UUID.
-3. Provision access using the SQL editor, replacing the UUID placeholder in both statements:
+2. In Authentication settings, enable new-user signup and **Confirm Email**. Keep anonymous sign-ins disabled. Set a minimum password length of at least 8 and the strongest practical character requirements. Enable leaked-password protection when the project plan supports it.
+3. Configure production SMTP. Supabase's built-in email sender is intended for testing and has a very low project-wide delivery limit.
+4. Enable Cloudflare Turnstile under Authentication → Bot and Abuse Protection. Put its public site key in `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; store the matching secret only in Supabase, never in the app.
+5. Change the Confirm signup email template link to:
 
-```sql
-insert into public.allowed_users (user_id)
-values ('YOUR-AUTH-USER-UUID');
-
-insert into public.profiles (user_id)
-values ('YOUR-AUTH-USER-UUID');
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">Confirm your email</a>
 ```
 
-4. Disable new user signups in Supabase Auth; this app has no public registration.
-   The allowlist is an additional protection, not a replacement for authentication.
-5. Enable the Google provider. Configure its Google OAuth client in Supabase.
+6. Enable the Google provider. Configure its Google OAuth client in Supabase.
    The Google authorized redirect URI is the callback shown by Supabase
    (`https://<project-ref>.supabase.co/auth/v1/callback`), not the Next.js callback.
-6. In Supabase URL Configuration, set your production Site URL and allow these app redirect URLs:
-   `http://localhost:3000/auth/callback` and `https://<your-app-domain>/auth/callback`.
+7. In Supabase URL Configuration, set your production Site URL and allow the exact app callback URLs:
+   `http://localhost:3000/auth/callback`, `http://localhost:3000/auth/confirm`, and their `https://<your-app-domain>` equivalents.
    Add exact trusted deployment URLs as needed; avoid broad wildcard redirects.
-7. Set `apps/web/.env.local`:
+8. Set `apps/web/.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<project-publishable-key>
 SITE_URL=http://localhost:3000
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=<public-turnstile-site-key>
+EMAIL_SIGNUP_ENABLED=false
 ```
 
 Use the **publishable** key, never a secret/service-role key. Restart after configuration changes.
 Use your HTTPS deployment origin for `SITE_URL` in production. Keep `apps/web/.env.local` out of Git.
 
-Sign in with email/password, then test Google with the same verified email. Both methods must resolve
-to the provisioned user UUID; check linked identities in Supabase if access is denied.
+Create and confirm an email/password account, then test Google signup/sign-in. Supabase automatically links trusted identities that use the same verified email. Migration 009 creates the `allowed_users` and blank `profiles` rows; manual provisioning is no longer required.
+Set `EMAIL_SIGNUP_ENABLED=true` only after completing SMTP, email-template, confirmation, and abuse-protection configuration, then redeploy.
 Password recovery UI is not included in this foundation; account administration currently uses Supabase.
 
 ## Verification
@@ -120,23 +130,23 @@ npm run check
 npm run build
 ```
 
-The tests cover attendance boundaries, date validation, database-generated credits, cross-user isolation,
-blocked self-enrollment, revoked access, anonymous access, and historical totals. Database tests use PGlite
+The tests cover attendance boundaries, date validation, database-generated credits, automatic provisioning,
+cross-user isolation, revoked access without deletion, anonymous access, calendar calculations, and historical totals. Database tests use PGlite
 with minimal Supabase auth-role stubs; they do not connect to or alter your hosted Supabase project.
 
 Before deployment, verify these against your configured project:
 
-- Password and Google sign-in, refresh persistence, logout, and denied access for a different account.
-- Browser/API reads and writes obey RLS; an unapproved user cannot grant itself access.
+- Email signup and confirmation, Google signup/sign-in, refresh persistence, and logout.
+- Two real accounts cannot read or mutate one another's attendance, profile, reports, or exports.
 - Revoking `allowed_users.active` removes data access.
-- Both localhost and production OAuth callback URLs work.
+- Both localhost and production OAuth and email-confirmation callback URLs work.
 
 GitHub Actions runs lint, TypeScript, tests, and the production build. Import the repository into Vercel,
-select `apps/web` as the application root, choose Node.js 24, and configure the three environment variables there when ready to deploy.
+select `apps/web` as the application root, choose Node.js 24, and configure the four environment variables there when ready to deploy.
 
 ## Attendance rules
 
-The internship target is configurable per profile and defaults to 486 hours. Regular attendance counts only within 08:30–12:00 and 13:00–18:30
+The internship target is required during each student's profile setup. Regular attendance counts only within 08:30–12:00 and 13:00–18:30
 on weekdays. Optional overtime counts after 18:30 from actual login. No overnight entries.
 All totals derive from attendance; the sample's 62h 30m is not added as an opening balance.
 
@@ -145,6 +155,8 @@ The original DAR sample stays local and is ignored by Git alongside generated DO
 
 Implementation references: [Supabase server-side auth](https://supabase.com/docs/guides/auth/server-side/creating-a-client),
 [Google sign-in](https://supabase.com/docs/guides/auth/social-login/auth-google),
+[user-data provisioning triggers](https://supabase.com/docs/guides/auth/managing-user-data),
+[CAPTCHA protection](https://supabase.com/docs/guides/auth/auth-captcha),
 and [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
 ## PDF export and template

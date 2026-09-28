@@ -26,7 +26,7 @@ export function validateRows(value: unknown): ActivityRow[] {
 }
 
 export function buildReportSnapshot(profile: Profile | null, date: string, totalMinutes: number, value: unknown): ReportSnapshot {
-  if (!profile || !profile.full_name.trim() || !profile.last_name.trim() || !profile.school.trim() || !profile.department.trim()) {
+  if (!profile || !profile.full_name.trim() || !profile.last_name.trim() || !profile.school.trim() || !profile.department.trim() || profile.target_hours == null) {
     throw new Error("Complete your profile before downloading the report.");
   }
   const rows = validateRows(value);

@@ -177,7 +177,7 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
   .workspace-header { align-items: center; flex-direction: row; }
   .workspace-identity { width: 100%; justify-content: space-between; }
   .workspace-nav { display: none; }
-  .mobile-bottom-nav { position: fixed; z-index: 40; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .15rem; border-top: 1px solid var(--line-strong); background: var(--surface); padding-top: .35rem; padding-right: max(.3rem, env(safe-area-inset-right, 0px)); padding-bottom: calc(.35rem + env(safe-area-inset-bottom, 0px)); padding-left: max(.3rem, env(safe-area-inset-left, 0px)); box-shadow: 0 -10px 24px -22px #16232aaa; }
+  .mobile-bottom-nav { position: fixed; z-index: 40; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .1rem; border-top: 1px solid var(--line-strong); background: var(--surface); padding-top: .35rem; padding-right: max(.2rem, env(safe-area-inset-right, 0px)); padding-bottom: calc(.35rem + env(safe-area-inset-bottom, 0px)); padding-left: max(.2rem, env(safe-area-inset-left, 0px)); box-shadow: 0 -10px 24px -22px #16232aaa; }
   .mobile-bottom-nav a { display: flex; min-width: 0; min-height: 3.5rem; touch-action: manipulation; align-items: center; justify-content: center; flex-direction: column; gap: .2rem; border-radius: .55rem; color: var(--muted); font-size: .68rem; font-weight: 600; line-height: 1; text-decoration: none; transition: transform .12s cubic-bezier(.23, 1, .32, 1), background-color .12s ease, color .12s ease; -webkit-user-select: none; user-select: none; }
   .mobile-bottom-nav a:hover { color: var(--muted); }
   .mobile-bottom-nav a:active { transform: scale(.97); background: var(--row-hover); }
@@ -203,3 +203,26 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
 .milestones span::before { content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: .4rem; background: var(--line-strong); }
 .milestones span:last-child::before { left: auto; right: 0; }
 .milestones span[data-passed="true"] { color: var(--ink); font-weight: 700; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--line); border-radius: .7rem; }
+.calendar-weekday { border-bottom: 1px solid var(--line-strong); background: var(--surface-soft); padding: .65rem .45rem; color: var(--muted); font-size: .75rem; font-weight: 700; text-align: center; }
+.calendar-cell { min-width: 0; min-height: 7rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); }
+.calendar-cell:nth-child(7n) { border-right: 0; }
+.calendar-cell:nth-last-child(-n+7) { border-bottom: 0; }
+.calendar-cell > :is(a, div) { display: flex; width: 100%; height: 100%; min-height: inherit; flex-direction: column; align-items: flex-start; gap: .65rem; padding: .65rem; color: inherit; text-decoration: none; }
+.calendar-cell > a:hover { background: var(--row-hover); color: var(--ink); }
+.calendar-cell[aria-current="date"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.calendar-cell[data-outside="true"], .calendar-cell[data-future="true"] { background: var(--surface-soft); color: var(--muted); }
+.calendar-cell[data-outside="true"] { opacity: .55; }
+.calendar-day-number { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.calendar-badges { margin-top: auto; max-width: 100%; }
+.calendar-status { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.calendar-status-short { display: none; }
+@media (max-width: 700px) {
+  .calendar-panel { padding: .75rem; }
+  .calendar-cell { min-height: 4.75rem; }
+  .calendar-cell > :is(a, div) { gap: .35rem; padding: .4rem; }
+  .calendar-weekday { padding: .5rem .15rem; font-size: .65rem; }
+  .calendar-status { min-height: 1.35rem; padding: .15rem .35rem; font-size: .65rem; }
+  .calendar-status-full { display: none; }
+  .calendar-status-short { display: inline; }
+}

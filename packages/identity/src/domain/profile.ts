@@ -3,5 +3,5 @@ export type Profile = {
   last_name: string;
   school: string;
   department: string;
-  target_hours: number;
+  target_hours: number | null;
 };

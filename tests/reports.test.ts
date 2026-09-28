@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import PizZip from "pizzip";
 import { renderDar } from "../packages/reports/src/infrastructure/docx-renderer.ts";
 import { buildReportSnapshot, formatReportDate, parsePage, reportFilename, validateRows } from "../packages/reports/src/domain/rules.ts";
+import { calendarGrid, calendarMonthBounds, latestReportPerDate, parseCalendarMonth, shiftCalendarMonth } from "../packages/reports/src/domain/calendar.ts";
 
 test("universal filenames, safe rows, and sample-based DOCX layout", async () => {
   assert.equal(formatReportDate("2026-09-23"), "September 23, 2026");
@@ -52,10 +53,10 @@ test("report state machine, immutable snapshots, archived files, and owner acces
       alter table storage.objects enable row level security; grant usage on schema storage to authenticated;
       grant select,insert,update,delete on storage.objects to authenticated;
       insert into auth.users values ('${owner}'),('${other}');`);
-    for (const name of ["202609180001_foundation.sql", "202609180002_attendance_workflow.sql", "202609180003_reports.sql", "202609210004_absences.sql", "202609210005_report_submit_owner_id.sql", "202609210006_optional_report_exports.sql", "202609210007_delete_report_drafts.sql", "202609210008_profile_target_hours.sql"]) {
+    for (const name of ["202609180001_foundation.sql", "202609180002_attendance_workflow.sql", "202609180003_reports.sql", "202609210004_absences.sql", "202609210005_report_submit_owner_id.sql", "202609210006_optional_report_exports.sql", "202609210007_delete_report_drafts.sql", "202609210008_profile_target_hours.sql", "202609280009_open_signup_provisioning.sql"]) {
       await db.exec(await readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
     }
-    await db.exec(`insert into public.allowed_users(user_id) values ('${owner}'),('${other}'); set role authenticated; set request.jwt.claim.sub='${owner}';`);
+    await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);
     const rows = [{ project: "Portal", task: "Built tracker", status: "Completed", remarks: "" }];
     const call = async (command: string, id?: string, version?: string, date = "2020-09-17") => {
       const result = await db.query<{ id: string }>("select public.report_command($1,$2,$3,$4,$5::jsonb) as id", [command, date, id ?? null, version ?? null, JSON.stringify(rows)]);
@@ -73,8 +74,8 @@ test("report state machine, immutable snapshots, archived files, and owner acces
     await assert.rejects(call("ready", id, report.updated_at), /Complete attendance/);
     await db.exec("update public.attendance set absent=false,time_in='08:30',time_out='18:30'");
     await assert.rejects(call("ready", id, report.updated_at), /profile/);
-    await db.exec(`insert into public.profiles(user_id,full_name,last_name,school,department) values ('${owner}','Example Intern','Intern','School','IT');`);
-    assert.equal(Number((await db.query<{ target_hours: number }>("select target_hours from public.profiles where user_id=$1", [owner])).rows[0].target_hours), 486);
+    await db.exec(`update public.profiles set full_name='Example Intern',last_name='Intern',school='School',department='IT' where user_id='${owner}';`);
+    assert.equal((await db.query<{ target_hours: number | null }>("select target_hours from public.profiles where user_id=$1", [owner])).rows[0].target_hours, null);
     await assert.rejects(db.exec("update public.profiles set target_hours=0"));
     await db.exec("update public.profiles set target_hours=600");
     await call("ready", id, report.updated_at); report = await load(id);
@@ -119,11 +120,10 @@ test("all-reports listing orders by date then version, pages, and stays owner-sc
       alter table storage.objects enable row level security; grant usage on schema storage to authenticated;
       grant select,insert,update,delete on storage.objects to authenticated;
       insert into auth.users values ('${owner}'),('${other}');`);
-    for (const name of ["202609180001_foundation.sql", "202609180002_attendance_workflow.sql", "202609180003_reports.sql", "202609210004_absences.sql", "202609210005_report_submit_owner_id.sql", "202609210006_optional_report_exports.sql", "202609210007_delete_report_drafts.sql", "202609210008_profile_target_hours.sql"]) {
+    for (const name of ["202609180001_foundation.sql", "202609180002_attendance_workflow.sql", "202609180003_reports.sql", "202609210004_absences.sql", "202609210005_report_submit_owner_id.sql", "202609210006_optional_report_exports.sql", "202609210007_delete_report_drafts.sql", "202609210008_profile_target_hours.sql", "202609280009_open_signup_provisioning.sql"]) {
       await db.exec(await readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
     }
-    await db.exec(`insert into public.allowed_users(user_id) values ('${owner}'),('${other}');
-      insert into public.reports(user_id,report_date,revision,status) values
+    await db.exec(`insert into public.reports(user_id,report_date,revision,status) values
         ('${owner}','2020-09-16',1,'submitted'),('${owner}','2020-09-17',1,'submitted'),('${owner}','2020-09-17',2,'draft'),
         ('${owner}','2020-09-18',1,'ready'),('${other}','2020-09-14',1,'draft');
       set role authenticated; set request.jwt.claim.sub='${owner}';`);
@@ -144,4 +144,24 @@ test("all-reports listing orders by date then version, pages, and stays owner-sc
 test("parsePage clamps untrusted page values", () => {
   assert.equal(parsePage(undefined), 1); assert.equal(parsePage("abc"), 1); assert.equal(parsePage("-5"), 1);
   assert.equal(parsePage("3"), 3); assert.equal(parsePage("99999999"), 10000);
+});
+
+test("calendar month navigation, grid boundaries, and latest report selection", () => {
+  assert.equal(parseCalendarMonth("2026-09", "2026-10-02"), "2026-09");
+  assert.equal(parseCalendarMonth("2026-13", "2026-10-02"), "2026-10");
+  assert.equal(parseCalendarMonth("bad", "2026-10-02"), "2026-10");
+  assert.deepEqual(calendarMonthBounds("2026-09"), { from: "2026-09-01", to: "2026-09-30" });
+  assert.equal(shiftCalendarMonth("2026-01", -1), "2025-12");
+  assert.equal(shiftCalendarMonth("2026-12", 1), "2027-01");
+  const grid = calendarGrid("2026-09");
+  assert.equal(grid.length, 35);
+  assert.equal(grid[0].date, "2026-08-30");
+  assert.equal(grid.at(-1)?.date, "2026-10-03");
+  const base = { id: "a", status: "draft" as const, needs_review: false };
+  const latest = latestReportPerDate([
+    { ...base, report_date: "2026-09-02", revision: 1 },
+    { ...base, id: "b", report_date: "2026-09-01", revision: 1, status: "submitted" },
+    { ...base, id: "c", report_date: "2026-09-02", revision: 3, status: "ready" },
+  ]);
+  assert.deepEqual(latest.map(report => `${report.report_date}#${report.revision}`), ["2026-09-01#1", "2026-09-02#3"]);
 });

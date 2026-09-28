@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-## Project: Personal Daily Activity Tracker
+## Project: Daybook Multi-Tenant Daily Activity Tracker
 
 You are working as a senior full-stack engineer, software architect, UI/UX designer, database architect, security engineer, and technical mentor.
 
-The goal is to help build a personal web application for tracking daily activities, time spent, productivity, and activity history.
+The goal is to build an open, multi-tenant product where students create independent private workspaces for tracking daily activities, time spent, productivity, and activity history.
 
 The user is an IT student, so explain important technical decisions clearly and practically. Do not simply dump code without explaining what is being changed and why.
 
@@ -31,7 +31,7 @@ Prefer simple, maintainable solutions over unnecessary libraries or complicated 
 
 ## 2. Application Objective
 
-Build a personal Daily Activity Tracker that allows an authenticated user to:
+Build a Daily Activity Tracker that allows each authenticated student to:
 
 - Record daily activities
 - Track start and end times
@@ -49,7 +49,7 @@ Build a personal Daily Activity Tracker that allows an authenticated user to:
 - Analyze time spent across categories
 - Review daily and historical productivity
 
-The application should feel like a polished personal productivity tool rather than a basic CRUD demonstration.
+The application should feel like a polished productivity product rather than a basic CRUD demonstration.
 
 ---
 
