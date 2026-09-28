@@ -6,6 +6,14 @@ import type { AttendanceValues } from "../domain/rules";
 type Client = SupabaseClient<Database>;
 export const HISTORY_PAGE_SIZE = 20;
 
+export async function recentWorkedAttendance(db: Client, userId: string, today: string) {
+  const { data, error } = await db.from("attendance").select("work_date,absent,time_out,regular_minutes,overtime_minutes")
+    .eq("user_id", userId).eq("absent", false).not("time_out", "is", null).lte("work_date", today)
+    .order("work_date", { ascending: false }).limit(10);
+  if (error) throw new Error("Could not load recent attendance for your completion estimate.");
+  return data ?? [];
+}
+
 export async function attendanceSummary(db: Client, throughDate: string) {
   const { data, error } = await db.rpc("attendance_summary", { through_date: throughDate });
   if (error) throw new Error("Could not load attendance totals.");

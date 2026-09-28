@@ -34,6 +34,19 @@ export async function listAllReports(db: Client, owner: string, page: number, fi
   if (error) throw new Error("Could not load reports. Apply the reports migration first.");
   return { reports: data ?? [], count: count ?? 0 };
 }
+export async function reminderReportsForRange(db: Client, owner: string, from: string, to: string) {
+  const reports = new Map<string, { status: "draft" | "ready" | "submitted"; needs_review: boolean }>();
+  // Pagination prevents Supabase's row cap from turning saved reports into false reminders.
+  for (let offset = 0;; offset += 1000) {
+    const { data, error } = await db.from("reports").select("report_date,id,revision,status,needs_review")
+      .eq("user_id", owner).gte("report_date", from).lte("report_date", to)
+      .order("report_date", { ascending: true }).order("revision", { ascending: false }).order("id", { ascending: true }).range(offset, offset + 999);
+    if (error) throw new Error("Could not check reports for reminders. Please retry.");
+    for (const row of data ?? []) if (!reports.has(row.report_date)) reports.set(row.report_date, { status: row.status, needs_review: row.needs_review });
+    if ((data?.length ?? 0) < 1000) return reports;
+  }
+}
+
 export async function reportsForMonth(db: Client, owner: string, from: string, to: string) {
   const { data, error } = await db.from("reports").select("id,report_date,revision,status,needs_review")
     .eq("user_id", owner).gte("report_date", from).lte("report_date", to)

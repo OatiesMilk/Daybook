@@ -10,7 +10,7 @@ import type { ActionState } from "@dtr/shared/contracts/action-state";
 
 export type { ActionState } from "@dtr/shared/contracts/action-state";
 
-function refresh() { for (const path of ["/", "/attendance", "/history", "/reports", "/calendar"]) revalidatePath(path); }
+function refresh() { for (const path of ["/", "/attendance", "/history", "/reports", "/calendar", "/notifications"]) revalidatePath(path); }
 
 export async function saveAttendanceAction(_state: ActionState, form: FormData): Promise<ActionState> {
   const { supabase, user } = await requireOwner();

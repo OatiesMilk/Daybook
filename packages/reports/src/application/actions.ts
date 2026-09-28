@@ -25,7 +25,7 @@ export async function reportAction(_state: ActionState, form: FormData): Promise
       ...(command === "save" ? { activity_rows: validateRows(JSON.parse(String(form.get("rows") ?? "[]"))) } : {}),
     });
   } catch (cause) { return { error: cause instanceof Error ? cause.message : "Could not update report." }; }
-  revalidatePath("/reports"); revalidatePath("/reports/all"); revalidatePath("/calendar"); revalidatePath("/");
+  revalidatePath("/reports"); revalidatePath("/reports/all"); revalidatePath("/calendar"); revalidatePath("/notifications"); revalidatePath("/");
   if (command === "delete") redirect(`/reports?date=${encodeURIComponent(date)}&deleted=1`);
   redirect(`/reports?id=${id}&saved=1`);
 }

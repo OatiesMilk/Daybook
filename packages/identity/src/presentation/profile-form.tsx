@@ -9,8 +9,7 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
     {profile?.target_hours == null && <p className="notice" data-tone="info">Complete your profile and set the internship hours required by your school to personalize your workspace.</p>}
     {([['full_name','Full name'],['last_name','Last name (for filenames)'],['school','School'],['department','Department / team']] as const).map(([key,label]) =>
       <label key={key}>{label}<input name={key} required maxLength={key === "last_name" ? 100 : 200} defaultValue={profile?.[key] ?? ""} /></label>)}
-    <label>Required internship hours<input name="target_hours" type="number" inputMode="numeric" required min={1} max={10000} step={1} defaultValue={profile?.target_hours ?? ""} placeholder="Enter your required hours" /><span className="mt-1 block text-xs font-normal text-muted">This controls dashboard progress and remaining-hours estimates. It does not change recorded attendance.</span></label>
-    <p className="text-xs text-muted">Filename format: DAR_LASTNAME_MMDDYY.docx or .pdf. Revision history is stored separately.</p>
+    <label>Required internship hours<input name="target_hours" type="number" inputMode="numeric" required min={1} max={10000} step={1} defaultValue={profile?.target_hours ?? ""} placeholder="Enter your required hours" /></label>
     {state.error && <p role="alert" className="notice" data-tone="danger">{state.error}</p>}{state.success && <p role="status" className="notice" data-tone="success">{state.success}</p>}
     <button className="primary-button" disabled={pending}>{pending ? "Saving…" : "Save profile"}</button>
   </form>;

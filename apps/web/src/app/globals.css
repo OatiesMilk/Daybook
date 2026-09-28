@@ -221,6 +221,33 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
 .calendar-badges { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: auto; max-width: 100%; }
 .calendar-status { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .calendar-status-short { display: none; }
+.workspace-header-tools { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; border: 1px solid var(--line); border-radius: .55rem; background: var(--surface); color: var(--ink); flex: none; }
+.notification-bell:active { background: var(--row-hover); }
+.notification-count { position: absolute; top: -.35rem; right: -.35rem; display: grid; place-items: center; min-width: 1.2rem; min-height: 1.2rem; padding: .1rem .25rem; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: .65rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.notification-popup { position: fixed; inset: auto; top: var(--reminder-top, 5rem); right: var(--reminder-right, 1rem); width: min(26rem, calc(100vw - 1.5rem)); max-width: none; max-height: min(38rem, calc(100dvh - var(--reminder-top, 5rem) - 1rem)); margin: 0; padding: 0; border: 1px solid var(--line-strong); border-radius: .85rem; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); overflow: hidden; }
+.notification-popup[open] { display: flex; flex-direction: column; }
+.notification-popup::backdrop { background: color-mix(in srgb, var(--ink) 18%, transparent); }
+.notification-popup-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border-bottom: 1px solid var(--line); flex: none; }
+.notification-popup-body { padding: 1rem; overflow-y: auto; overscroll-behavior: contain; }
+.notification-preferences { padding-top: .75rem; border-top: 1px solid var(--line); }
+.notification-preferences summary { display: list-item; min-height: 2.75rem; padding-block: .65rem; cursor: pointer; font-size: .875rem; font-weight: 600; }
+.notification-list { display: grid; gap: 1rem; }
+.notification-item { display: grid; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.completion-estimate { border-top: 1px solid var(--line); padding-top: 1.25rem; }
+@media (max-width: 400px) {
+  .workspace-identity { gap: .5rem; }
+  .workspace-header-tools { gap: .25rem; }
+  .workspace-header-tools .current-date-time { min-width: 0; padding-left: .5rem; }
+  .workspace-header-tools .current-date-time svg { display: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .notification-bell:hover { background: var(--row-hover); color: var(--ink); }
+}
+@media (max-width: 700px) {
+  .notification-popup { top: auto; right: 0; bottom: 0; left: 0; width: 100%; max-height: 85dvh; border-radius: 1rem 1rem 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .notification-popup-body { padding-right: max(1rem, env(safe-area-inset-right, 0px)); padding-left: max(1rem, env(safe-area-inset-left, 0px)); }
+}
 .calendar-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .calendar-summary dt, .calendar-detail-list dt { color: var(--muted); font-size: .875rem; }
 .calendar-summary dd { margin-top: .5rem; font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -229,11 +256,21 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
 .calendar-details { scroll-margin-top: 1rem; }
 .calendar-detail-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; margin: 1.5rem 0; }
 .calendar-detail-list dd { margin-top: .35rem; font-weight: 600; }
-.more-destinations { display: grid; gap: 1rem; max-width: 48rem; }
-.more-destination { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: var(--ink); text-decoration: none; touch-action: manipulation; }
-.more-destination:active { background: var(--row-hover); }
+.more-navigation { position: relative; min-width: 0; }
+.more-trigger { display: inline-flex; min-height: 2.85rem; align-items: center; justify-content: center; gap: .2rem; border: 0; border-radius: .5rem; padding: .45rem .75rem; background: transparent; color: var(--muted); font-size: .875rem; font-weight: 600; touch-action: manipulation; }
+.more-trigger[data-active="true"], .more-trigger[aria-expanded="true"] { background: var(--nav-bg); color: var(--nav-ink); }
+.more-trigger:active { background: var(--row-hover); }
+.more-menu { position: absolute; z-index: 50; top: calc(100% + .5rem); right: 0; width: min(15rem, calc(100vw - 2rem)); max-height: calc(100dvh - 7rem); margin: 0; padding: .4rem; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line-strong); border-radius: .7rem; background: var(--surface); box-shadow: var(--shadow); list-style: none; }
+.more-menu[hidden] { display: none; }
+.more-menu a, .mobile-bottom-nav .more-menu a { display: flex; min-height: 2.85rem; flex-direction: row; align-items: center; justify-content: space-between; gap: .75rem; border-radius: .4rem; padding: .65rem .75rem; color: var(--ink); font-size: .875rem; font-weight: 600; line-height: 1.3; text-align: left; text-decoration: none; }
+.more-menu a[aria-current="page"] { background: var(--nav-bg); color: var(--nav-ink); }
+.more-menu a:active { background: var(--row-hover); }
+@media (max-width: 700px) {
+  .mobile-bottom-nav .more-trigger { width: 100%; min-height: 3.5rem; flex-direction: column; gap: .2rem; padding: 0; font-size: .68rem; line-height: 1; }
+  .mobile-bottom-nav .more-menu { top: auto; bottom: calc(100% + .75rem); right: .25rem; }
+}
 @media (hover: hover) and (pointer: fine) {
-  .calendar-cell > a:hover, .more-destination:hover { background: var(--row-hover); color: var(--ink); }
+  .calendar-cell > a:hover, .more-trigger:hover, .more-menu a:hover, .mobile-bottom-nav .more-menu a:hover { background: var(--row-hover); color: var(--ink); }
 }
 @media (pointer: coarse) {
   input:not([type="checkbox"]), select, textarea { font-size: 1rem; }

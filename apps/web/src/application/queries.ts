@@ -1,8 +1,8 @@
 import "server-only";
 import { requireOwner } from "@dtr/identity/application/auth";
-import { internshipToday, isWorkday, validateWorkday } from "@dtr/attendance/domain/index";
-import { attendanceForMonth, attendanceSummary, findAttendance, listAttendance, openAttendance } from "@dtr/attendance/infrastructure/repository";
-import { getReport, listAllReports, reportHistory, reportsForDate, reportsForMonth, type AllReportsFilters } from "@dtr/reports/infrastructure/repository";
+import { attendanceReminders, completionEstimate, internshipClockMinutes, internshipToday, isWorkday, reminderWindow, validateWorkday } from "@dtr/attendance/domain/index";
+import { attendanceForMonth, attendanceSummary, findAttendance, listAttendance, openAttendance, recentWorkedAttendance } from "@dtr/attendance/infrastructure/repository";
+import { getReport, listAllReports, reminderReportsForRange, reportHistory, reportsForDate, reportsForMonth, type AllReportsFilters } from "@dtr/reports/infrastructure/repository";
 import { calendarMonthBounds, parseCalendarMonth } from "@dtr/reports/domain/calendar";
 import { getProfile } from "@dtr/identity/infrastructure/profile-repository";
 import { parsePage } from "@dtr/reports/domain/rules";
@@ -14,12 +14,25 @@ const parseIsoDate = (value?: string) => value && /^\d{4}-\d{2}-\d{2}$/.test(val
 export async function dashboardData() {
   const { supabase, user } = await requireOwner();
   const today = internshipToday(); const workday = isWorkday(today);
-  const [summary, open, record, profile] = await Promise.all([
+  const [summary, open, record, profile, recent] = await Promise.all([
     attendanceSummary(supabase, today), openAttendance(supabase, user.id),
     workday ? findAttendance(supabase, user.id, today) : Promise.resolve(null),
     getProfile(supabase, user.id),
+    recentWorkedAttendance(supabase, user.id, today),
   ]);
-  return { today, workday, summary, open, record, targetHours: profile?.target_hours ?? null };
+  const targetHours = profile?.target_hours ?? null;
+  return { today, workday, summary, open, record, targetHours, estimate: targetHours == null ? null : completionEstimate(today, summary.minutes, targetHours, recent) };
+}
+
+export async function notificationData() {
+  const { supabase, user } = await requireOwner();
+  const now = new Date();
+  const today = internshipToday(now);
+  const from = reminderWindow(today);
+  const [entries, reports] = await Promise.all([
+    attendanceForMonth(supabase, user.id, from, today), reminderReportsForRange(supabase, user.id, from, today),
+  ]);
+  return { userId: user.id, today, from, reminders: attendanceReminders(entries, reports, today, internshipClockMinutes(now)) };
 }
 
 export async function attendanceData(requestedDate?: string) {

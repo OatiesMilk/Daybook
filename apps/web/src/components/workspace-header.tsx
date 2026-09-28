@@ -3,11 +3,13 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 import { ThemeToggle } from "@dtr/shared/ui/theme-toggle";
 import { logout } from "@dtr/identity/application/actions";
 import { CurrentDateTime } from "@/components/current-date-time";
+import { NotificationCenter } from "@dtr/attendance/presentation/notification-center";
+import { loadReminders } from "@/application/notification-actions";
 
 export function WorkspaceHeader() {
   return <>
     <header className="workspace-header">
-      <div className="workspace-identity"><Brand /><CurrentDateTime /></div><nav aria-label="Main navigation" className="workspace-nav">
+      <div className="workspace-identity"><Brand /><div className="workspace-header-tools"><CurrentDateTime /><NotificationCenter load={loadReminders} /></div></div><nav aria-label="Main navigation" className="workspace-nav">
         <WorkspaceNav />
         <ThemeToggle />
         <form action={logout}><button className="secondary-button">Sign out</button></form>

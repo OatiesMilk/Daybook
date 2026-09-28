@@ -67,6 +67,15 @@
 - The latest Draft revision can be permanently deleted after explicit confirmation. Ready, Submitted, older, and stale revisions remain protected by the database command.
 - Import safety: 4 MB upload cap, content/extension checks, bounded DOCX ZIP expansion and XML, no filesystem extraction, and isolated PDF parsing with page/text/memory/time limits. Ambiguous statuses and blank Project cells are surfaced for explicit review.
 
+### Completion forecast and reminders
+
+- Home estimates completion from the latest 10 completed, non-absent attendance records, using exact credited minutes before rounding the displayed average. Future weekdays begin after today; holidays/leave are not modeled. Zero-credit samples produce no estimate; reaching the target shows Target reached.
+- Header bell opens a compact desktop popup or safe-area-aware mobile bottom sheet. A native modal dialog provides Escape dismissal and focus containment; Close, outside clicks, and action links dismiss it. Badge counts enabled, undismissed reminders. Preferences are expandable inside the panel; More no longer lists a notification page, and old `/notifications` bookmarks redirect Home.
+- An owner-guarded server action (no client-provided user ID) loads the bounded 30-day attendance window and owner-scoped, paginated latest-report states. Today's open attendance gets time-out and DAR reminders at 18:20 Asia/Manila (10 minutes before standard 18:30 time out). Prior unfinished entries remain due; completed attendance can prompt DAR earlier. DAR reminders cover missing reports, Draft, Ready, and Needs review, clearing only for Submitted without review. State-specific reminder IDs let a new submission/review stage appear even if an earlier stage was dismissed. Absences are excluded; reminders never mutate records or submit on the user's behalf.
+- Reminder loading runs after header hydration instead of blocking page rendering. Data refreshes on opening, route changes, every visible-app minute, and browser tab reactivation. Stale async results are discarded; errors have a retry control rather than a false all-caught-up state. The dialog opens only on user request; no automatic interruption or added bottom tab.
+- Reminder-type toggles and dismiss/restore controls are stored per-account in browser localStorage, with safe parsing and visible storage-error feedback. Resolved reminders disappear without maintaining a second database source of truth. These are in-app reminders, not push/email or background scheduled delivery. Preferences do not sync across browsers; older unfinished entries remain available via history.
+- No new migration, dependency, elevated credentials, or remote data mutation is required. Real-phone touch/visual acceptance remains pending; mobile-native guidance informed touch-sized bell controls and compact header spacing.
+
 ### Calendar
 
 - `/calendar` provides a dependency-free month grid with Today/previous/next navigation and a native month/year picker.
@@ -80,7 +89,7 @@
 
 ### Visual design
 
-- Primary navigation is reduced to Home, Attendance, Calendar, Reports, and More. `/more` groups Attendance history, All reports, and Profile/account without changing existing route URLs. Mobile uses five safe-area-aware bottom tabs, touch-sized controls, and 16px form inputs on coarse pointers.
+- Primary navigation is Home, Attendance, Calendar, Reports, and More. More opens a desktop dropdown or a mobile menu above its bottom tab, linking directly to Attendance history, All reports, and Profile/account. Current links and the More section are highlighted. Selection, outside pointer interaction, Escape, focus leaving, route navigation, and responsive breakpoint changes dismiss the menu. Arrow keys/Home/End aid keyboard navigation; normal Tab order is preserved without a modal focus trap. Old `/more` bookmarks redirect Home. Mobile retains five safe-area-aware tabs and touch-sized controls. No added dependency or database change.
 
 - Token-based light and dark themes (`apps/web/src/app/globals.css`): system-following by default, header/login toggle with saved choice and no-flash script. Ink-blue accent, cool mineral paper, flat paper background. One typeface (IBM Plex Sans via next/font) for the whole UI. No hardcoded colours remain in components. Contrast checked numerically (text 4.5:1, borders/focus 3:1).
 
@@ -112,7 +121,7 @@
 
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
-- [x] Twenty-five automated test groups passed (includes automatic provisioning/suspension, cross-user RLS, calendar summary/open-entry/absence/missing-report rules, month logic/latest-revision selection, Draft preview validation, monorepo boundaries, report-import safety, all-reports behavior, dashboard pace helpers, and the in-progress rule).
+- [x] Twenty-nine automated test groups passed (includes reminder badge/preferences/corrupt-storage rules, 18:20 timing and DAR lifecycle/review states, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, and all-reports behavior).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
 - [x] Owner isolation, anonymous/revoked access, blocked self-enrollment.
@@ -169,6 +178,14 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Open signup depends operationally on hosted Auth configuration: Confirm Email, production SMTP, password policy, Turnstile, the token-hash email template, and exact redirect URLs.
 
 ## Change log
+
+- 2026-09-28: Replaced the intermediate More page with an inline desktop dropdown/mobile upward menu, direct record/account links, current-page indicators, light dismissal, and keyboard navigation. Native-mobile/design-engineering guidance informed touch sizes, capability-gated hover, bounded scrolling, and instant keyboard interactions. Old `/more` URL redirects Home. Lint, TypeScript, all 29 tests, and production build pass; real-phone and live browser keyboard/interaction checks remain pending.
+
+- 2026-09-28: Moved today's time-out reminder to 18:20 Philippine time, ten minutes before the standard 18:30 time out. Added simultaneous DAR preparation/submission reminders, based on the latest revision, which persist through Draft/Ready and reappear for Needs review. No automatic external submission, schema change, or push/email delivery. Lint, TypeScript, 29 tests, and production build pass; live reminder acceptance remains pending.
+
+- 2026-09-28: Replaced the notification page with a bell-triggered desktop popup/mobile bottom sheet, count badge, native-dialog keyboard/focus handling, outside-click dismissal, and expandable preferences. Removed its More destination; old URL redirects Home. Design-engineering/mobile-native skills guided compact controls, bounded scrolling, instant keyboard interaction, and safe-area spacing. No dependency or migration. Lint, TypeScript, 28 tests, and production build pass; authenticated browser and real-phone acceptance remain pending.
+
+- 2026-09-28: Added a recent-pace completion forecast to Home and an in-app notification center with missing time-out/report reminders, account-scoped browser preferences and dismiss/restore, visible-page refresh, and header/More links while preserving five mobile tabs. Queries remain owner-scoped with RLS and reminders are derived from saved data. No migration or dependency. Lint, TypeScript, 27 tests and production build pass; real-phone and hosted interaction acceptance pending.
 
 - 2026-09-28: Added calendar monthly totals, missing-report badges, URL-driven day details with attendance/report links, and a native month/year picker. Simplified primary navigation to five destinations with records and account grouped under `/more`. Mobile-native guidance informed touch sizing, coarse-pointer input sizing, capability-gated hover, and safe-area-aware tabs. No migration or dependency added. Lint, TypeScript, all 25 tests, and production build pass; real-phone and hosted visual/interaction checks remain pending.
 

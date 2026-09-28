@@ -5,7 +5,7 @@ import { DashboardProgress } from "@dtr/attendance/presentation/dashboard-progre
 import { TodayCard } from "@dtr/attendance/presentation/today-card";
 
 export default async function Dashboard() {
-  const { today, workday, summary, open, record, targetHours } = await dashboardData();
+  const { today, workday, summary, open, record, targetHours, estimate } = await dashboardData();
   // Today's unfinished entry is handled by the Today card, so this list covers earlier days only.
   const pastOpen = open.rows.filter(row => row.work_date !== today);
   const pastCount = open.count - (open.rows.length - pastOpen.length);
@@ -18,7 +18,7 @@ export default async function Dashboard() {
         <h2 id="target-setup-heading" className="section-title mt-4">Set your internship target</h2>
         <p className="muted-copy mt-2">Add the hours required by your school before tracking progress. Your attendance records stay private to your account.</p>
         <Link href="/settings" className="primary-button mt-5">Complete profile</Link>
-      </section> : <DashboardProgress total={summary.minutes} days={summary.days} targetHours={targetHours} />}
+      </section> : <DashboardProgress total={summary.minutes} days={summary.days} targetHours={targetHours} estimate={estimate} />}
       <TodayCard today={today} workday={workday} record={record} />
     </div>
     <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1.7fr_1fr]">
