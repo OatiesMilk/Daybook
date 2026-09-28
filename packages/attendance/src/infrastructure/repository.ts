@@ -18,6 +18,15 @@ export async function findAttendance(db: Client, userId: string, date: string) {
   return data;
 }
 
+export async function attendanceForMonth(db: Client, userId: string, from: string, to: string) {
+  const { data, error } = await db.from("attendance").select("work_date,absent,time_in,time_out,work_location,regular_minutes,overtime_minutes")
+    .eq("user_id", userId)
+    .gte("work_date", from).lte("work_date", to)
+    .order("work_date", { ascending: true });
+  if (error) throw new Error("Could not load calendar attendance. Please retry.");
+  return data ?? [];
+}
+
 export async function openAttendance(db: Client, userId: string) {
   const { data, count, error } = await db.from("attendance")
     .select("work_date,time_in", { count: "exact" })

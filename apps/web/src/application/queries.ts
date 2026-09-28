@@ -1,7 +1,7 @@
 import "server-only";
 import { requireOwner } from "@dtr/identity/application/auth";
 import { internshipToday, isWorkday, validateWorkday } from "@dtr/attendance/domain/index";
-import { attendanceSummary, findAttendance, listAttendance, openAttendance } from "@dtr/attendance/infrastructure/repository";
+import { attendanceForMonth, attendanceSummary, findAttendance, listAttendance, openAttendance } from "@dtr/attendance/infrastructure/repository";
 import { getReport, listAllReports, reportHistory, reportsForDate, reportsForMonth, type AllReportsFilters } from "@dtr/reports/infrastructure/repository";
 import { calendarMonthBounds, parseCalendarMonth } from "@dtr/reports/domain/calendar";
 import { getProfile } from "@dtr/identity/infrastructure/profile-repository";
@@ -68,7 +68,11 @@ export async function calendarData(requestedMonth?: string) {
   const today = internshipToday();
   const month = parseCalendarMonth(requestedMonth, today);
   const { from, to } = calendarMonthBounds(month);
-  return { today, month, reports: await reportsForMonth(supabase, user.id, from, to) };
+  const [reports, attendance] = await Promise.all([
+    reportsForMonth(supabase, user.id, from, to),
+    attendanceForMonth(supabase, user.id, from, to),
+  ]);
+  return { today, month, reports, attendance };
 }
 
 export async function profileData() {

@@ -69,12 +69,18 @@
 
 ### Calendar
 
-- `/calendar` provides a dependency-free month grid with Today/previous/next navigation.
+- `/calendar` provides a dependency-free month grid with Today/previous/next navigation and a native month/year picker.
+- Monthly summary shows credited hours, completed worked days, absences, and missing reports. Only completed, non-absent attendance without any saved report is flagged as missing; open entries are excluded.
 - Each date shows the latest saved revision's Draft, Ready, Submitted, or Needs review state using the existing status badges.
-- Past and current weekdays link directly to `/reports?date=YYYY-MM-DD`; weekends and future dates remain noninteractive because the report model rejects them.
+- Daily credited hours use PostgreSQL-generated regular and overtime minutes for completed attendance. Absent days show zero; open entries show In progress or Unfinished without credit. One monthly attendance query supplies both absence markers and hours.
+- Saved attendance absences appear as an Absent badge, including days without a report; a saved report's status remains visible alongside it. Absence reads are owner-scoped and month-bounded. Attendance saves, corrections, and deletion revalidate the calendar. No migration required.
+- Past and current weekdays open URL-driven day details with attendance state, time in/out, location, regular/overtime credit, and report status. Details link to attendance editing and the report editor. Weekends and future dates remain noninteractive because the report model rejects them.
+- Attendance and report changes refresh calendar data and missing-report indicators. No new migration or dependency is needed.
 - Month reads are owner-scoped, range-bounded, and select only the fields needed by the calendar.
 
 ### Visual design
+
+- Primary navigation is reduced to Home, Attendance, Calendar, Reports, and More. `/more` groups Attendance history, All reports, and Profile/account without changing existing route URLs. Mobile uses five safe-area-aware bottom tabs, touch-sized controls, and 16px form inputs on coarse pointers.
 
 - Token-based light and dark themes (`apps/web/src/app/globals.css`): system-following by default, header/login toggle with saved choice and no-flash script. Ink-blue accent, cool mineral paper, flat paper background. One typeface (IBM Plex Sans via next/font) for the whole UI. No hardcoded colours remain in components. Contrast checked numerically (text 4.5:1, borders/focus 3:1).
 
@@ -106,7 +112,7 @@
 
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
-- [x] Twenty-four automated test groups passed (includes automatic provisioning/suspension, cross-user RLS, calendar month logic/latest-revision selection, Draft preview validation, monorepo boundaries, report-import safety, all-reports behavior, dashboard pace helpers, and the in-progress rule).
+- [x] Twenty-five automated test groups passed (includes automatic provisioning/suspension, cross-user RLS, calendar summary/open-entry/absence/missing-report rules, month logic/latest-revision selection, Draft preview validation, monorepo boundaries, report-import safety, all-reports behavior, dashboard pace helpers, and the in-progress rule).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
 - [x] Owner isolation, anonymous/revoked access, blocked self-enrollment.
@@ -163,6 +169,12 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Open signup depends operationally on hosted Auth configuration: Confirm Email, production SMTP, password policy, Turnstile, the token-hash email template, and exact redirect URLs.
 
 ## Change log
+
+- 2026-09-28: Added calendar monthly totals, missing-report badges, URL-driven day details with attendance/report links, and a native month/year picker. Simplified primary navigation to five destinations with records and account grouped under `/more`. Mobile-native guidance informed touch sizing, coarse-pointer input sizing, capability-gated hover, and safe-area-aware tabs. No migration or dependency added. Lint, TypeScript, all 25 tests, and production build pass; real-phone and hosted visual/interaction checks remain pending.
+
+- 2026-09-28: Added daily credited hours to the calendar, including enabled overtime, zero-hour absences, and clear open-entry states. Extended the existing monthly attendance read instead of adding another query. No migration. Lint, TypeScript, 24 tests, and production build pass; hosted visual acceptance pending.
+
+- 2026-09-28: Added saved attendance absences to the calendar with separate Absent badges, compact mobile labels and a legend. Report and absence queries run concurrently; attendance changes refresh the calendar. Lint, TypeScript, 24 tests, and production build pass. Hosted visual/interaction verification remains pending.
 
 - 2026-09-28: User selected Google signup for the initial rollout while SMTP is unavailable. Signup page and server action now gate email registration on `EMAIL_SIGNUP_ENABLED=true`; default is false. Existing password sign-in remains available. Hosted migration 009 application was reported by the user. Lint, TypeScript, all 24 tests, and production build pass for this rollout change.
 

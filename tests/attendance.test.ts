@@ -1,9 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { attendanceState, calculateAttendance, internshipToday, isWorkday, pace, parseTime } from "../packages/attendance/src/domain/index.ts";
+import { attendanceState, calendarCredit, calendarSummary, calculateAttendance, internshipToday, isWorkday, pace, parseTime } from "../packages/attendance/src/domain/index.ts";
 
 const credit = (timeIn: string, timeOut: string, overtime = false, date = "2026-09-18") =>
   calculateAttendance({ date, timeIn, timeOut, overtime });
+
+test("calendar summary counts completed attendance, excludes open entries, and detects missing reports", () => {
+  const worked = { work_date: "2026-09-21", absent: false, time_out: "19:30:00", regular_minutes: 540, overtime_minutes: 60 };
+  const open = { ...worked, work_date: "2026-09-22", time_out: null };
+  const absent = { ...worked, work_date: "2026-09-23", absent: true, time_out: null };
+  const zero = { ...worked, work_date: "2026-09-24", regular_minutes: 0, overtime_minutes: 0 };
+  assert.equal(calendarCredit(worked), 600);
+  assert.equal(calendarCredit(open), null);
+  assert.equal(calendarCredit(absent), 0);
+  assert.deepEqual(calendarSummary([worked, open, absent, zero], new Set([worked.work_date])), {
+    minutes: 600, workedDays: 2, absences: 1, missingReports: 1,
+  });
+  assert.deepEqual(calendarSummary([], new Set()), { minutes: 0, workedDays: 0, absences: 0, missingReports: 0 });
+  assert.equal(calendarSummary([worked], new Set(["2026-09-25"])).missingReports, 1);
+});
 
 test("full day, early login, late arrival, and half-days", () => {
   assert.equal(credit("08:30", "18:30").totalMinutes, 540);
