@@ -42,7 +42,9 @@ export async function exportReport(id: string, format: string) {
   const path = `${user.id}/${report.id}/report.${format}`;
   const mime = format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   let bytes: Buffer;
-  if (report.status === "draft") {
+  // PDFs follow the current template, including past reports with an older
+  // archived PDF. Non-drafts still use their frozen snapshot above.
+  if (report.status === "draft" || format === "pdf") {
     try {
       bytes = await renderReport(format, snapshot);
       if (bytes.length > 10485760) throw new Error("The report exceeds the 10 MB export limit.");

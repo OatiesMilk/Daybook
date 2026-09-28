@@ -19,12 +19,14 @@ Supabase SQL Editor (copy the complete contents of each file into a new query an
 6. `supabase/migrations/202609210007_delete_report_drafts.sql`
 7. `supabase/migrations/202609210008_profile_target_hours.sql`
 8. `supabase/migrations/202609280009_open_signup_provisioning.sql`
+9. `supabase/migrations/202609280010_help_request_limits.sql`
 
 Do not rerun `202609180001_foundation.sql` if you already applied it. The new migrations retain existing records.
 The reports migration also creates the private `dar-exports` storage bucket and its access policies.
 Migration 005 fixes the ambiguous `owner_id` reference that prevented Ready reports from being marked Submitted in Supabase.
 Migration 006 lets you mark a Ready report Submitted without first downloading DOCX or PDF. Exports remain available afterward.
 Migration 009 enables automatic account/profile provisioning for open signup and makes each new student choose an internship target.
+Migration 010 adds auth-bound Help request counters and expiring permits. It stores no conversations and changes no attendance/report records. Help fails safely unavailable until this migration is applied.
 
 Run `npm ci` to install the export dependencies, then restart with `npm run dev`.
 Your existing Supabase values were preserved. Never commit `apps/web/.env.local` or `.tools`.
@@ -38,7 +40,7 @@ Your existing Supabase values were preserved. Never commit `apps/web/.env.local`
 5. Open **Reports**, choose a day, enter activity rows, and **Save draft**.
    You can also use **Import from file**: DOCX imports activity rows and report headers; PDF imports headers only because PDF text does not preserve reliable table cells. Review everything before applying it to the editor.
 6. Download DOCX or PDF from a saved Draft even while attendance is in progress. Draft previews use completed attendance totals, exclude the open entry until time out is saved, and are not archived.
-7. **Mark Ready** after attendance and activities are complete. This freezes a snapshot of the rows, profile, and cumulative hours through that date. Ready and Submitted downloads are archived in private Supabase Storage.
+7. **Mark Ready** after attendance and activities are complete. This freezes a snapshot of the rows, profile, and cumulative hours through that date. Ready and Submitted DOCX downloads are archived in private Supabase Storage. PDF downloads render the saved snapshot with the current template, including past reports.
 8. After you actually send the report, check the submission confirmation and **Mark Submitted**. Downloads are optional.
 9. To correct a frozen report, **Reopen as a new draft revision**. Old snapshots and files remain unchanged.
 10. Use **Calendar** to review daily hours, absences, monthly totals, and day details with attendance/report links. **More** opens a dropdown on desktop or a menu above its mobile tab for Attendance history, All reports, and Profile/account—no intermediate page. Select a link, click outside, or press Escape to close; arrow keys also navigate the links.
@@ -48,6 +50,16 @@ Your existing Supabase values were preserved. Never commit `apps/web/.env.local`
 Attendance changes flag Ready/Submitted reports on or after the affected date for review.
 Universal filenames are `DAR_LASTNAME_MMDDYY.docx` and `.pdf`, for example `DAR_AKIA_091726.docx`.
 Revisions use separate storage directories, not filename suffixes.
+
+## Daybook Help
+
+The header Help launcher opens a desktop popup/mobile sheet for verified system FAQs. It explains attendance, reports, imports/exports, reminders, calendar, profile, and progress. No primary navigation tab is added. The chat is read-only: it cannot see your records, write your DAR, send reports, or change anything.
+
+This version uses deterministic approved answers, not an LLM. There is no AI provider, API key, token usage, external retrieval, or AI billing. Apply migration 010 once and restart/redeploy normally. Existing Supabase environment variables are sufficient; `DAYBOOK_HELP_ENABLED=false` disables the API (default: enabled). No remote migration or deployment is performed automatically.
+
+Authenticated active accounts may make up to 20 accepted requests per fixed minute and 200 per UTC day, with one ten-second expiring permit at a time across Vercel instances. Only account ID, counters, time buckets, and the temporary permit are stored in one row per account. Questions/history are not stored or logged by this feature. The endpoint accepts one question up to 800 characters and a 4 KiB JSON body; history/user IDs are rejected. Responses use approved text and allowlisted in-app source links only. Chat keeps at most ten turns in page memory and clears on reload/navigation or Clear chat.
+
+The knowledge base is `apps/web/src/help/domain/knowledge.ts`; maintain it alongside product changes. Intent matching is deliberately conservative and may miss paraphrases or choose an imperfectly relevant FAQ. Unknown questions get a fallback or clarification, not generated facts. Injection instructions have no execution path: all output is drawn from approved guidance. This is not a claim that keyword detection can perfectly classify every request. No live-model evaluation is applicable; hosted permissions/rate limits and real-phone/keyboard interaction still require live acceptance.
 
 ## Importing an existing report
 
@@ -163,18 +175,21 @@ and [row-level security](https://supabase.com/docs/guides/database/postgres/row-
 
 ## PDF export and template
 
-PDF export renders a print-styled HTML view of the report snapshot or saved Draft preview through headless Chromium
-(`puppeteer-core` + `@sparticuz/chromium` in production, the `puppeteer` dev dependency's bundled
-browser locally). No document ever leaves your own Vercel deployment or Supabase project — there is
-no third-party conversion service. Generated files are archived in your private Supabase bucket.
-To use a specific local Chrome/Chromium install instead of `puppeteer`'s bundled one, set `CHROME_PATH`
-in `apps/web/.env.local`.
+PDF export uses `pdf-lib` to preserve `apps/web/templates/dar-template.pdf` as page artwork
+and draw snapshot details and a dynamic activity table over it. Rows wrap, grow and continue
+on additional pages with repeated headers. No browser, Python runtime or third-party conversion
+service is required. Templates and the bundled font are included in the Vercel export function.
+DOCX files are archived in your private Supabase bucket. PDF downloads regenerate with the current
+template from the frozen report snapshot, so past reports receive design updates on their next download.
+Legacy archived PDFs remain stored but are no longer used for downloads.
+See [template maintenance and layout notes](apps/web/templates/README.md).
 
 `apps/web/templates/dar-template.docx` is the reusable DOCX template derived from the user's sample, with personal
 example content removed. It retains the landscape layout, watermark, table styling, and field formatting.
 The small DAR v2 label is ordinary header text for LibreOffice compatibility; multi-page tables repeat
 column headings and keep ordinary rows together. The original source document remains unchanged and
-ignored by Git. The PDF export uses its own independent HTML layout — it does not depend on this template.
+ignored by Git. PDF export uses the corresponding blank PDF template; replacing either template
+requires reviewing its renderer and running export QA.
 
 To regenerate the DOCX template after editing the original source:
 

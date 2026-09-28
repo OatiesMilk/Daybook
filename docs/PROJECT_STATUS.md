@@ -88,6 +88,13 @@
 - Attendance and report changes refresh calendar data and missing-report indicators. No new migration or dependency is needed.
 - Month reads are owner-scoped, range-bounded, and select only the fields needed by the calendar.
 
+### Daybook Help
+
+- Header Help opens a native modal desktop popup/mobile sheet without adding a tab. Starter questions, plain-text replies, approved source links, loading, retry, unavailable, and clear-chat states are implemented. Native focus containment/Escape and inert background prevent simultaneous user interaction with Reminders. Chat is bounded to ten in-memory turns, never persisted; requests do not accept history or client user IDs.
+- Deterministic FAQ retrieval returns only version-controlled public guidance for implemented Daybook features. No LLM, provider key/billing, model tools, internet retrieval, private product reads, or product writes. Unknown/ambiguous/off-topic requests fall back safely. Mixed questions can get supported guidance with a scope refusal. Exact response validation rejects invented text or links. Conservative intent matching can miss paraphrases/select imperfectly relevant system guidance; it is not a perfect semantic classifier.
+- `/api/help` verifies Auth and active access, rejects cross-site calls, bounds streamed JSON to 4 KiB and questions to 800 characters, uses five-second response/2.5-second limiter RPC deadlines, and returns private/no-store safe errors. Migration 010 adds one private counter row per account and auth-bound security-definer quota/lease commands: 20 accepted requests per fixed minute, 200 per UTC day, one ten-second expiring permit per account across serverless instances. No messages or records are stored. Missing migration/limiter failure fails closed. Existing Supabase configuration suffices; optional `DAYBOOK_HELP_ENABLED=false` disables the API.
+- Migration 010 has only been created locally. Hosted application and browser/real-phone acceptance remain pending. No live model evaluation applies to this FAQ-only version. Design-engineering/mobile-native guidance informed instant modal behavior, touch sizing, safe-area padding, and the 16px question input. Prompt-engineering guidance informed bounded evidence-only responses and adversarial tests; its optional reference files were unavailable.
+
 ### Visual design
 
 - Primary navigation is Home, Attendance, Calendar, Reports, and More. More opens a desktop dropdown or a mobile menu above its bottom tab, linking directly to Attendance history, All reports, and Profile/account. Current links and the More section are highlighted. Selection, outside pointer interaction, Escape, focus leaving, route navigation, and responsive breakpoint changes dismiss the menu. Arrow keys/Home/End aid keyboard navigation; normal Tab order is preserved without a modal focus trap. Old `/more` bookmarks redirect Home. Mobile retains five safe-area-aware tabs and touch-sized controls. No added dependency or database change.
@@ -122,7 +129,7 @@
 
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
-- [x] Thirty automated test groups passed (includes today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, and all-reports behavior).
+- [x] Thirty-five automated test groups passed (includes Help FAQs/scope/response validation, authenticated endpoint failures, shared quotas/leases/SQL permissions, today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, and all-reports behavior).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
 - [x] Owner isolation, anonymous/revoked access, blocked self-enrollment.
@@ -160,6 +167,7 @@
 9. Configure the Supabase Auth settings and Turnstile environment variable documented in README.md.
 10. Run npm ci and restart npm run dev.
 11. Sign up, confirm email, complete Profile, add real attendance, save a report, mark Ready, then confirm submission. Export whenever needed.
+12. Apply 202609280010_help_request_limits.sql once before using Daybook Help. Existing Supabase values suffice; no AI provider/key. Help fails unavailable until the shared limiter is present.
 
 Do not rerun migration 001. Existing records are retained. No remote migrations or data changes were performed by the agent.
 `LIBREOFFICE_PATH` is no longer used and was removed from `apps/web/.env.example`; PDF export runs via headless Chromium instead
@@ -179,6 +187,8 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Open signup depends operationally on hosted Auth configuration: Confirm Email, production SMTP, password policy, Turnstile, the token-hash email template, and exact redirect URLs.
 
 ## Change log
+
+- 2026-09-28: Implemented Daybook-only read-only FAQ chat, approved guidance/source allowlist, authenticated endpoint, distributed database quotas/expiring permits (new migration 010), compact header launcher, desktop popup/mobile sheet, and adversarial/endpoint/SQL permission tests. Lint, TypeScript, all 35 tests, and production build pass. No AI provider, added dependency, remote migration, or deployment. Hosted/real-device acceptance pending.
 
 - 2026-09-28: Balanced the dashboard's desktop card heights, bottom-aligned the Today attendance action, replaced the tall shortcut panel with a responsive full-width strip, and reduced the empty attendance alert to a small caught-up message. Design-engineering/mobile-native guidance informed alignment, natural mobile sizing, and capability-gated shortcut hover. Lint, TypeScript, all 30 tests, and production build pass; real-phone and live visual acceptance remain pending. No database changes or dependencies.
 

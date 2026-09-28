@@ -5,11 +5,12 @@ import { logout } from "@dtr/identity/application/actions";
 import { CurrentDateTime } from "@/components/current-date-time";
 import { NotificationCenter } from "@dtr/attendance/presentation/notification-center";
 import { loadReminders } from "@/application/notification-actions";
+import { HelpChat } from "@/help/presentation/help-chat";
 
 export function WorkspaceHeader() {
   return <>
     <header className="workspace-header">
-      <div className="workspace-identity"><Brand /><div className="workspace-header-tools"><CurrentDateTime /><NotificationCenter load={loadReminders} /></div></div><nav aria-label="Main navigation" className="workspace-nav">
+      <div className="workspace-identity"><Brand /><div className="workspace-header-tools"><CurrentDateTime /><NotificationCenter load={loadReminders} /><HelpChat /></div></div><nav aria-label="Main navigation" className="workspace-nav">
         <WorkspaceNav />
         <ThemeToggle />
         <form action={logout}><button className="secondary-button">Sign out</button></form>

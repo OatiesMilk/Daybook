@@ -7,7 +7,7 @@ const config: NextConfig = {
   transpilePackages: ["@dtr/attendance", "@dtr/identity", "@dtr/reports", "@dtr/shared"],
   serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium", "pdfjs-dist"],
   outputFileTracingIncludes: {
-    "/api/reports/*/export": ["./templates/dar-template.docx", "../../node_modules/@sparticuz/chromium/bin/**"],
+    "/api/reports/*/export": ["./templates/dar-template.docx", "./templates/dar-template.pdf", "./templates/fonts/**"],
     "/api/reports/import": ["../../packages/reports/src/infrastructure/pdf-import-worker.mjs", "../../node_modules/pdfjs-dist/**"],
   },
   async headers() {
