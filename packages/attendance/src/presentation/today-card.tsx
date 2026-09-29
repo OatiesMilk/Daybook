@@ -22,11 +22,10 @@ function describe(today: string, workday: boolean, record: Attendance | null): S
 export function TodayCard({ today, workday, record, children }: { today: string; workday: boolean; record: Attendance | null; children?: ReactNode }) {
   const state = describe(today, workday, record);
   return <section className="panel today-card flex flex-col" data-tone={state.tone} aria-label="Today">
-    <p className="text-sm font-semibold text-muted">{longDate(today)}</p>
-    <div className="mt-3"><span className="status" data-tone={state.pill}>{state.label}</span></div>
-    <h2 className="section-title mt-3 !text-2xl">{state.headline}</h2>
+    <div className="dashboard-card-heading"><p className="text-sm font-semibold text-muted"><time dateTime={today}>{longDate(today)}</time></p><span className="status" data-tone={state.pill}>{state.label}</span></div>
+    <h2 className="section-title mt-5 !text-2xl">{state.headline}</h2>
     <p className="muted-copy mt-2">{state.detail}</p>
+    <div className="mt-5"><Link href={state.action.href} className={`${state.action.primary ? "primary-button" : "secondary-button"} w-full sm:w-auto`}>{state.action.text}</Link></div>
     {children}
-    <div className="mt-auto pt-6"><Link href={state.action.href} className={`${state.action.primary ? "primary-button" : "secondary-button"} w-full sm:w-auto`}>{state.action.text}</Link></div>
   </section>;
 }

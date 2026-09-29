@@ -12,8 +12,8 @@ export default async function Dashboard() {
   const pastCount = open.count - (open.rows.length - pastOpen.length);
   return <main id="main" className="app-main">
     <WorkspaceHeader />
-    <div className="page-heading"><h1>Your internship at a glance</h1><p>Attendance recorded through {today}. Pick up where your last workday left off.</p></div>
-    <div className="grid items-start gap-6 lg:items-stretch lg:grid-cols-[1.7fr_1fr]">
+    <div className="page-heading dashboard-heading"><h1>Your internship at a glance</h1><p>Progress through <time dateTime={today}>{new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${today}T00:00:00Z`))}</time>. Pick up where you left off.</p></div>
+    <div className="dashboard-overview">
       {targetHours == null ? <section className="panel" aria-labelledby="target-setup-heading">
         <span className="status" data-tone="info">First-time setup</span>
         <h2 id="target-setup-heading" className="section-title mt-4">Set your internship target</h2>
@@ -22,6 +22,11 @@ export default async function Dashboard() {
       </section> : <DashboardProgress total={summary.minutes} days={summary.days} targetHours={targetHours} estimate={estimate} />}
       <TodayCard today={today} workday={workday} record={record}>
         {workday && <TodayReportSection date={today} report={report} inProgress={Boolean(record && !record.absent && !record.time_out)} absent={record?.absent ?? false} />}
+        <section className="today-attendance-check" aria-label="Earlier attendance"><div>
+          <h3 className="font-semibold">Attendance check</h3>
+          <p className="muted-copy mt-2">{pastCount > 0 ? `${pastCount} earlier workday${pastCount === 1 ? " needs" : "s need"} time out before hours can be credited.` : "You’re caught up. No earlier workdays need time out."}</p>
+          <Link href={pastCount > 0 ? "/history?state=open" : "/history"} className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">{pastCount > 0 ? "Review unfinished days" : "View attendance history"}</Link>
+        </div></section>
       </TodayCard>
     </div>
     {pastCount > 0 ?
@@ -32,10 +37,7 @@ export default async function Dashboard() {
           <ul className="record-list mt-4">{pastOpen.map(row => <li className="record-row" key={row.work_date}><Link href={`/attendance?date=${row.work_date}`} className="flex min-h-11 items-center justify-between gap-3 text-sm font-semibold text-accent"><span>{row.work_date} · started {row.time_in?.slice(0, 5) ?? "—"}</span><span className="underline">Add time out</span></Link></li>)}</ul>
           {pastCount > pastOpen.length && <Link href="/history?state=open" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">View all {pastCount} unfinished entries</Link>}
         </>
-      </section> : <p className="muted-copy mt-5 flex items-start gap-2">
-        <svg className="mt-0.5 shrink-0 text-accent" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
-        <span>You’re caught up on attendance. No earlier workdays need time out.</span>
-      </p>}
+      </section> : null}
       <nav className="dashboard-shortcuts mt-6" aria-label="Shortcuts">
         <h2 className="sr-only">Shortcuts</h2>
         <ul className="shortcut-grid">

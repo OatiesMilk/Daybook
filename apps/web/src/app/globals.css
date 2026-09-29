@@ -65,11 +65,23 @@ button:disabled { cursor: wait; opacity: .62; }
 a { text-underline-offset: .2em; }
 a:hover { color: var(--link-hover); }
 input, select, textarea { caret-color: var(--link); }
-label { display: block; font-size: .875rem; font-weight: 600; color: var(--ink); }
+label { display: block; min-width: 0; font-size: .875rem; font-weight: 600; color: var(--ink); }
 .checkbox-option { display: inline-flex; align-items: center; gap: .75rem; width: fit-content; max-width: 100%; min-height: 2.75rem; border: 1px solid var(--line-strong); border-radius: .55rem; background: var(--surface); padding: .5rem .75rem; cursor: pointer; }
 .checkbox-option input[type="checkbox"] { margin: 0; }
 label input:not([type="checkbox"]), label select, label textarea { margin-top: .45rem; }
 input:not([type="checkbox"]), select, textarea { min-width: 0; width: 100%; min-height: 2.85rem; border: 1px solid var(--line-strong); border-radius: .55rem; padding: .65rem .8rem; background: var(--surface); color: var(--ink); font: inherit; }
+/* Safari's native date/time fields have intrinsic sizes that can exceed narrow
+   labels. Size their outer box explicitly while retaining the native picker. */
+input:is([type="date"], [type="time"], [type="month"]) { appearance: none; -webkit-appearance: none; display: block; box-sizing: border-box; max-width: 100%; min-inline-size: 0; }
+input::-webkit-date-and-time-value { min-width: 0; text-align: left; }
+input::-webkit-datetime-edit { min-width: 0; padding: 0; }
+fieldset { min-width: 0; }
+.date-open-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; margin-bottom: 1.5rem; }
+.date-open-form > label { width: 14rem; max-width: 100%; }
+@media (max-width: 639px) {
+  .date-open-form { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .date-open-form > label, .date-open-form > .secondary-button { width: 100%; }
+}
 textarea { resize: vertical; }
 input:hover, select:hover, textarea:hover { border-color: var(--muted); }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
@@ -201,6 +213,26 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
   .page-heading { margin-top: 2.15rem; }
   .panel { padding: 1.1rem; }
 }
+.dashboard-heading h1 { font-size: clamp(1.8rem, 2.2vw, 2.3rem); }
+.dashboard-overview { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 1.25rem; }
+.dashboard-overview > .panel { min-width: 0; padding: clamp(1.25rem, 2vw, 1.75rem); }
+.dashboard-card-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.progress-percentage { border-radius: 999px; padding: .3rem .65rem; background: var(--nav-bg); color: var(--nav-ink); font-size: .75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dashboard-total { margin-top: 1rem; font-size: clamp(2.8rem, 5vw, 4.25rem); font-weight: 700; line-height: 1.08; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.dashboard-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.dashboard-stats dd { font-size: clamp(1.15rem, 1.5vw, 1.4rem); letter-spacing: -.02em; overflow-wrap: anywhere; }
+.dashboard-forecast { margin-top: 1.5rem; padding: 1rem 1.15rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--row-hover); }
+.forecast-heading { display: flex; align-items: flex-start; gap: .8rem; }
+.forecast-icon { display: flex; flex: none; align-items: center; justify-content: center; width: 2.35rem; height: 2.35rem; border-radius: .55rem; background: var(--nav-bg); color: var(--nav-ink); }
+.forecast-date { margin-top: .2rem; font-size: clamp(1.1rem, 1.6vw, 1.35rem); font-weight: 600; letter-spacing: -.015em; line-height: 1.3; }
+.forecast-note { margin-top: .8rem; color: var(--muted); font-size: .8rem; line-height: 1.6; }
+.forecast-details { margin-top: .5rem; font-size: .8rem; }
+.forecast-details summary { width: fit-content; min-height: 2.75rem; align-content: center; color: var(--link); cursor: pointer; font-weight: 600; }
+.forecast-details p { max-width: 65ch; margin-top: .4rem; color: var(--muted); line-height: 1.65; }
+.today-attendance-check { margin-top: auto; padding-top: 1.5rem; }
+.today-attendance-check > div { border-top: 1px solid var(--line); padding-top: 1.25rem; }
+@media (min-width: 1024px) { .dashboard-overview { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: stretch; gap: 1.5rem; } }
+@media (min-width: 1280px) { .dashboard-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .today-card { border-top: 4px solid var(--line-strong); }
 .today-card[data-tone="start"] { border-top-color: var(--link); }
 .today-card[data-tone="success"] { border-top-color: var(--success-ink); }
