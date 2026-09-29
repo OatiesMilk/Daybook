@@ -35,7 +35,7 @@ export function HelpChat() {
     controller.current = request;
     setLoading(true); setQuestion("");
     setTurns(current => [...(retry ? current.slice(0, -1) : current).slice(-9), { question: message }]);
-    const timeout = window.setTimeout(() => request.abort(), 8000);
+    const timeout = window.setTimeout(() => request.abort(), 12000);
     try {
       const response = await fetch("/api/help", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }), signal: request.signal, cache: "no-store" });
       const result: unknown = await response.json();
@@ -83,7 +83,7 @@ export function HelpChat() {
     }}>
       <div className="notification-popup-header"><div><h2 id={`${id}-heading`} className="section-title">Daybook Help</h2><p id={`${id}-scope`} className="muted-copy mt-1">Answers questions about Daybook only.</p></div><button type="button" className="secondary-button" onClick={close}>Close</button></div>
       <div ref={log} className="help-log" role="log" aria-label="Help conversation" aria-live="polite" aria-relevant="additions text">
-        {!turns.length && <div><h3 className="font-semibold">How can I help you use Daybook?</h3><p className="muted-copy mt-2">Verified FAQs only. I cannot read your records, change anything, or write your DAR.</p><div className="help-starters mt-4">{starterQuestions.map(item => <button type="button" className="secondary-button" key={item} onClick={() => { void ask(item); }}>{item}</button>)}</div></div>}
+        {!turns.length && <div><h3 className="font-semibold">How can I help you use Daybook?</h3><p className="muted-copy mt-2">Ask naturally about Daybook features or what I can help with. I can identify your signed-in account, but cannot read attendance or report records, change anything, or write your DAR. AI answers can make mistakes.</p><div className="help-starters mt-4">{starterQuestions.map(item => <button type="button" className="secondary-button" key={item} onClick={() => { void ask(item); }}>{item}</button>)}</div></div>}
         {turns.map((turn, index) => <div className="help-turn" key={index}>
           <p className="help-question"><span className="sr-only">You: </span>{turn.question}</p>
           {turn.reply && <div className="help-answer"><span className="sr-only">Daybook Help: </span><p className="whitespace-pre-wrap">{turn.reply.text}</p>{turn.reply.sources.length > 0 && <ul className="help-sources">{turn.reply.sources.map(source => <li key={source.id}><Link href={source.href} onClick={close}>{source.label}</Link></li>)}</ul>}</div>}
@@ -94,7 +94,7 @@ export function HelpChat() {
       <form className="help-composer" onSubmit={event => { event.preventDefault(); void ask(question); }}>
         <label htmlFor={`${id}-question`}>Ask about a Daybook feature</label>
         <div className="help-input-row"><input ref={input} id={`${id}-question`} value={question} maxLength={MAX_MESSAGE} autoComplete="off" enterKeyHint="send" onChange={event => setQuestion(event.target.value)} placeholder="How do I submit my DAR?" aria-describedby={`${id}-privacy`} /><button className="primary-button" disabled={loading || !question.trim()}>Send</button></div>
-        <div className="help-footer"><p id={`${id}-privacy`} className="muted-copy">Chat is kept only in this page’s memory. Don’t share sensitive information.</p><button type="button" className="secondary-button" onClick={clear} disabled={!turns.length && !question}>Clear chat</button></div>
+        <div className="help-footer"><p id={`${id}-privacy`} className="muted-copy">Questions may be processed by Google Gemini. Don’t share sensitive information. Chat clears when you leave this page.</p><button type="button" className="secondary-button" onClick={clear} disabled={!turns.length && !question}>Clear chat</button></div>
       </form>
     </dialog>
   </>;

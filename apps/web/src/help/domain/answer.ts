@@ -5,10 +5,9 @@ export const unknown = "I don’t have verified guidance for that Daybook questi
 export const MAX_MESSAGE = 800;
 const welcome = "Hello! I can explain Daybook attendance, reports, calendar, reminders, and settings. Choose a starter question or ask how to use a feature.";
 const clarify = "Which Daybook feature do you mean: attendance, reports, calendar, reminders, or profile settings? Ask one focused question so I can show verified guidance.";
-export type HelpReply = { text: string; sources: { id: string; label: string; href: string }[] };
+export type HelpReply = { text: string; sources: { id: string; label: string; href: string }[]; generated?: true; context?: "account" | "model" };
 
-// No model, executable tools, dynamic retrieval, or conversational instructions.
-// Even false-positive intent matches can return only these approved product texts.
+// Deterministic fallback and scope gate. This path only returns approved text.
 export function answerHelp(message: string): HelpReply {
   const text = message.normalize("NFKC").toLowerCase().replace(/[’']/g, "'");
   if (/\b(?:ignore|override|forget)\b.*\b(?:rules|instructions|prompt|previous)\b|\b(?:pretend|roleplay|role-play|base64|decode|system prompt|hidden prompt|api key|secret|credentials|database|infrastructure)\b|\b(?:another|other|someone else's)\b.*\b(?:user|student|account|report|attendance|data)\b/.test(text)) return { text: refusal, sources: [] };
@@ -56,8 +55,13 @@ export function isHelpReply(value: unknown): value is HelpReply {
     && reply.sources.every(source => articles.some(article => source?.id === article.id
       && source.href === helpRoutes[article.topic].href
       && source.label === `${article.source} · ${helpRoutes[article.topic].label}`)))) return false;
+  if (reply.context !== undefined) return ["account", "model"].includes(reply.context)
+    && reply.sources.length === 0 && reply.generated !== true && reply.text.trim().length > 0 && reply.text.length <= 500
+    && !/(?:https?:|www\.|[<>`]|\]\()/i.test(reply.text);
   if (!reply.sources.length) return [refusal, unknown, welcome, clarify].includes(reply.text);
   if (new Set(reply.sources.map(source => source.id)).size !== reply.sources.length) return false;
+  if (reply.generated === true) return reply.text.trim().length > 0 && reply.text.length <= 2000
+    && !/(?:https?:|www\.|[<>`]|\]\()|\b(?:I|we) (?:have )?(?:updated|deleted|submitted|sent|saved|recorded|accessed)\b/i.test(reply.text);
   const approvedText = reply.sources.map(source => articles.find(article => article.id === source.id)!.answer).join("\n\n");
   return reply.text === approvedText || reply.text === `${approvedText}\n\n${refusal}`;
 }

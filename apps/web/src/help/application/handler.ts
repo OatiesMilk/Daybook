@@ -1,7 +1,11 @@
-import { answerHelp, isHelpReply, parseHelpRequest } from "../domain/answer.ts";
+import { answerHelp, isHelpReply, parseHelpRequest, type HelpReply } from "../domain/answer.ts";
+import { contextQuestion } from "../domain/conversation.ts";
 
-export type HelpAccess = { acquire: () => Promise<string>; release: (permit: string) => Promise<void> };
-type Dependencies = { authorize: () => Promise<HelpAccess | "forbidden" | null>; enabled: boolean };
+export type HelpAccess = { acquire: () => Promise<string>; release: (permit: string) => Promise<void>;
+  accountName?: (signal: AbortSignal) => Promise<string | null> };
+type Dependencies = { authorize: () => Promise<HelpAccess | "forbidden" | null>; enabled: boolean;
+  generate?: (message: string, signal: AbortSignal) => Promise<HelpReply | null>;
+  model?: { enabled: boolean; name: string } };
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
 const unavailable = () => json({ error: "Daybook Help is temporarily unavailable. Try again shortly." }, 503);
@@ -30,7 +34,7 @@ async function boundedBody(request: Request, signal: AbortSignal) {
   } finally { signal.removeEventListener("abort", abort); reader.releaseLock(); }
 }
 
-export async function handleHelp(request: Request, dependencies: Dependencies, timeoutMs = 5000): Promise<Response> {
+export async function handleHelp(request: Request, dependencies: Dependencies, timeoutMs = 8000): Promise<Response> {
   const origin = request.headers.get("origin");
   if (origin && origin !== new URL(request.url).origin) return json({ error: "Cross-site requests are not allowed." }, 403);
   if (request.headers.get("sec-fetch-site") === "cross-site") return json({ error: "Cross-site requests are not allowed." }, 403);
@@ -55,7 +59,26 @@ export async function handleHelp(request: Request, dependencies: Dependencies, t
     if (!/^[0-9a-f-]{36}$/i.test(permit)) throw new Error("invalid permit");
     try {
       if (controller.signal.aborted) return unavailable();
-      const reply = answerHelp(message);
+      let reply = answerHelp(message);
+      const context = contextQuestion(message);
+      if (context === "account") {
+        let name: string | null = null;
+        try { name = await access.accountName?.(controller.signal) ?? null; } catch { /* Profile unavailable. */ }
+        const safeName = name?.replace(/[<>`\r\n]/g, "").trim().slice(0, 150);
+        reply = { context, sources: [], text: safeName && !/(?:https?:|www\.|\]\()/i.test(safeName)
+          ? `You're signed in as ${safeName}. This is the account associated with your current session.`
+          : "You're signed into your own Daybook account. I couldn't load your profile name; open Profile/account in More to check it." };
+      } else if (context === "model") {
+        reply = { context, sources: [], text: dependencies.model?.enabled
+          ? `Daybook Help is configured to use Google Gemini (${dependencies.model.name}). Some replies come from the built-in FAQ fallback when Gemini is unavailable. This model information is provided directly by Daybook.`
+          : "Daybook Help is currently using built-in FAQ answers. Gemini is not configured or is disabled." };
+      } else if (!reply.sources.some(source => source.id === "help-capabilities")) {
+        try {
+          const generated = await dependencies.generate?.(message, controller.signal);
+          if (generated && isHelpReply(generated) && !generated.context) reply = generated;
+        } catch { /* Provider failures keep the approved FAQ fallback available. */ }
+      }
+      if (controller.signal.aborted) return unavailable();
       if (!isHelpReply(reply)) throw new Error("invalid answer");
       return json(reply);
     } finally { await access.release(permit); }

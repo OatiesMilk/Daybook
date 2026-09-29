@@ -18,6 +18,12 @@ export const starterQuestions = [
 ] as const;
 
 export const articles: readonly HelpArticle[] = [
+  { id: "help-capabilities", title: "What you can ask Help", topic: "home", source: "Daybook Help capabilities",
+    matches: [/\bwhat (?:questions|can i ask|can you (?:do|help|answer))\b/, /\b(?:how (?:can|do) (?:you help|i use (?:you|this chat|help))|what are you|help topics|your capabilities)\b/],
+    answer: "You can ask how to use attendance, credited hours, DARs, PDF/DOCX downloads, imports, calendar, reminders, profile settings, and internship progress. For example: 'How do I record time out?', 'What does DAR mean?', or 'How do I download a past report?' You can also ask which model powers Help or whose account you are signed into. Help explains features; it cannot send reports, change records, or write activities for you." },
+  { id: "dar-definition", title: "What DAR means", topic: "reports", source: "Daily Activity Report template and report editor",
+    matches: [/\b(?:meaning|definition) of (?:a |the )?dar\b/, /\bdar (?:meaning|definition)\b/, /\bwhat(?: is|'s) (?:a |the )?dar\s*[?.!]*$/, /\b(?:what does (?:a |the )?dar|dar) (?:mean|stand for|stands for)\b/],
+    answer: "DAR stands for Daily Activity Report. In Daybook, it records your project, task description, Completed/Ongoing status, and remarks or blockers for a workday. Open Reports to create or review one." },
   { id: "time-out", title: "Record time out", topic: "attendance", source: "Attendance form and workflow",
     matches: [/\b(?:time[ -]?out|clock out)\b/],
     answer: "Open Attendance and select the workday. Enter your time out and save the entry. Today’s Add time out button opens that day directly. A time-in-only entry earns no hours until time out is saved. Time out must be after time in on the same day." },
@@ -44,7 +50,7 @@ export const articles: readonly HelpArticle[] = [
     answer: "Attendance changes can make a Ready or Submitted report’s saved hours outdated. Open the latest report and choose Create updated version, review the activities and corrected hours, save, and mark Ready again when prerequisites are complete. Earlier snapshots remain saved. A report needing review cannot be marked Submitted until resolved." },
   { id: "export", title: "Download a report", topic: "reports", source: "Report editor: download controls",
     matches: [/\b(?:download|export)\b.*\b(?:dar|report|pdf|docx)\b/, /\b(?:pdf|docx)\b.*\b(?:download|export)\b/],
-    answer: "Save your report changes first. Saved Drafts offer DOCX/PDF previews, even while attendance is open; previews count completed attendance only. Ready and Submitted reports have archived downloads in Next step, available afterward too. Filenames follow DAR_LASTNAME_MMDDYY.docx or .pdf." },
+    answer: "Save your report changes first. Saved Drafts offer DOCX/PDF previews, even while attendance is open; previews count completed attendance only. Ready and Submitted reports offer downloads in Next step, available afterward too. DOCX downloads use archived files. PDF downloads use the current template and the report's saved details, including past reports. Filenames follow DAR_LASTNAME_MMDDYY.docx or .pdf." },
   { id: "import", title: "Import and review a report", topic: "reports", source: "Report import review interface",
     matches: [/\bimport\b.*\b(?:dar|report|pdf|docx)\b/],
     answer: "Use the import controls in an editable report draft and select a DOCX or text-based PDF up to 4 MB. DOCX can import activity rows; PDF imports headers only. Review differences before applying anything. Imports never auto-save and do not replace attendance-derived hours. Choose Save draft to keep applied rows." },
