@@ -16,6 +16,8 @@ export function answerHelp(message: string): HelpReply {
   const selected = new Set<string>();
   let excluded = false;
   for (const part of parts) {
+    // Help never writes activities itself; requests to do so point to the editor's Draft with AI.
+    if (/^(?:(?:please|can you|could you|will you|help me)\s+)*(?:write|generate|create|draft|fill(?: in| out)?)\b.*\b(?:dar|report|activit\w*|tasks?)\b/.test(part)) { selected.add("ai-draft"); continue; }
     // Plain action commands are not executed or represented as successful actions.
     if (/^(?:(?:please|can you|could you|will you)\s+)*(?:submit|send|write|generate|create|delete|change|update|mark|record)\b/.test(part)
       || /\b(?:essay|homework|politics|president|recipe|joke|weather|medical|legal|law|investment|salary|javascript|python|code|geofenc\w*|gps|biometric\w*|payroll)\b/.test(part)) { excluded = true; continue; }

@@ -143,7 +143,7 @@
 
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
-- [x] `npm run check` on 2026-09-30: 37 tests pass (includes Help FAQs/scope/response validation, authenticated endpoint failures, shared quotas/leases/SQL permissions, today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, all-reports behavior, and AI drafting: input filters, strict output validation, merge rules, mocked Gemini client failures, and the drafting limiter SQL).
+- [x] `npm run check` on 2026-09-30: 40 tests pass. Help coverage is limited to `tests/help.test.ts` (Draft with AI answers, write-request redirects, retained refusals); the Help endpoint, quota, and scope tests described in earlier entries are not present in the repository and should be restored. Other coverage includes today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, all-reports behavior, and AI drafting: input filters, strict output validation, merge rules, mocked Gemini client failures, and the drafting limiter SQL).
 - [ ] Apply migration 011 to hosted Supabase, then run a live Draft with AI smoke test with a real key and review the panel on desktop and a real phone (no authenticated browser session was available to automation).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
@@ -205,6 +205,8 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Google's API documentation could not be fetched from the development environment (network egress blocked), so drafting reuses Help's request format, which passed the 2026-09-29 live smoke test. Drafting itself has not been run against the live API yet.
 
 ## Change log
+
+- 2026-09-30: Aligned Daybook Help with AI drafting. Added a Draft with AI knowledge article, removed wording that implied Daybook cannot draft activities, clarified the Help system instruction (the chat itself still never writes rows), and routed "write/generate/draft my DAR" requests to that article deterministically without calling Gemini. Added `tests/help.test.ts`; found and documented that earlier Help test coverage is missing from the repository. Lint, TypeScript, all 40 tests, and production build pass.
 
 - 2026-09-30: Moved Import from file out of the editing card into the Reports sidebar, as its own panel under Report history. The sidebar sticks beside the editor on wide screens and scrolls internally when an import review is taller than the window; on phones it stacks below the editor, and applying imported rows moves focus to the first filled row. Import behavior is unchanged. Lint, TypeScript, all 37 tests, and production build pass; authenticated browser review pending.
 

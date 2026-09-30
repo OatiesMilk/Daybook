@@ -53,7 +53,7 @@ Revisions use separate storage directories, not filename suffixes.
 
 ## Daybook Help
 
-The header Help launcher opens a desktop popup/mobile sheet for Daybook guidance. It explains attendance, reports, imports/exports, reminders, calendar, profile, and progress. It answers capability/model questions directly and can identify your signed-in profile name. No primary navigation tab is added. The chat cannot read attendance/report records, write your DAR, send reports, or change anything.
+The header Help launcher opens a desktop popup/mobile sheet for Daybook guidance. It explains attendance, reports, imports/exports, reminders, calendar, profile, and progress. It answers capability/model questions directly and can identify your signed-in profile name. No primary navigation tab is added. The chat cannot read attendance/report records, write your DAR, send reports, or change anything. It explains the report editor's Draft with AI feature, and requests like "write my DAR" point there instead of being refused.
 
 Help can use Google Gemini to answer from the approved Daybook guidance. Add `GEMINI_API_KEY` only to `apps/web/.env.local` and Vercel's server environment, then restart/redeploy. `GEMINI_MODEL` defaults to `gemini-3.5-flash-lite`; choose a model available to your project. `DAYBOOK_GEMINI_ENABLED=false` keeps FAQ-only mode. Missing keys, provider failures, quota limits and rejected responses fall back to deterministic FAQ answers. Apply migration 010 once; `DAYBOOK_HELP_ENABLED=false` disables the whole API. No remote migration or deployment is performed automatically.
 
