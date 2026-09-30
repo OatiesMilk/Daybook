@@ -56,6 +56,22 @@ leaves the app's own Vercel deployment or Supabase project — there is no exter
 DOCX creation, now works on Vercel and from any device, superseding the earlier local-only-LibreOffice constraint.
 The DOCX template retains the sample's layout and images; rendering checks covered one-page and four-page reports.
 
+## External AI processing (scoped exceptions)
+
+Report content otherwise never leaves the Vercel deployment and Supabase project. Two features are deliberate,
+user-approved exceptions that call Google Gemini through one shared REST client
+(`packages/shared/src/infrastructure/gemini.ts`: server-only key in a header, structured JSON output, abortable timeout,
+streamed response byte cap, no retries, no content logging):
+
+- **Help** sends one question plus version-controlled public guidance. It never sends records, account IDs, or history.
+- **AI drafting** (`packages/reports`: domain `ai-draft.ts`, application `ai-draft.ts`, presentation `ai-draft.tsx`) sends only
+  the notes typed into the Draft with AI box and the report date. The domain layer rejects credentials, emails, and phone
+  numbers before any call and strictly validates the model's rows through `validateRows()`. The server action enforces
+  Auth, active access, and a database-backed quota (migration 011, separate from Help's migration 010). Drafted rows only
+  populate unsaved editor state; saving still goes through `report_command`.
+
+Adding any other data to a provider request is a new privacy decision and must be approved and documented here.
+
 ## Verification boundaries
 
 Automated tests run the migration chain in embedded PostgreSQL with Supabase auth/storage stubs. They verify calculations,

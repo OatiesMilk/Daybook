@@ -61,6 +61,16 @@ Authenticated active accounts may make up to 20 accepted requests per fixed minu
 
 The knowledge base is `apps/web/src/help/domain/knowledge.ts`; maintain it alongside product changes. Ordinary paraphrases can reach Gemini without an exact FAQ keyword match. Gemini has no tools, external retrieval or private-record access. Account identity queries read only the current user's profile name on the server and bypass Gemini; capability/model replies also bypass it. Structured generated responses are checked for length, approved source IDs, links, markup and action claims. Scope and obvious-sensitive-input filters are conservative and incomplete. Generated answers can still be inaccurate despite valid sources; this is not a guarantee of factual correctness. The app retains FAQ refusals and unknown/clarification fallbacks. Provider calls use a six-second abortable timeout inside the eight-second handler deadline, with no automatic retries. Hosted permissions/rate limits and real-phone/keyboard interaction still require live acceptance.
 
+## Drafting activities with AI
+
+When Gemini is configured, the report editor shows **Draft with AI**. Type rough notes about your day (for example "fixed login redirect bug, reviewed Marco's PR, sprint planning with PM") and Gemini turns them into activity rows. The rows are added to the editor unsaved and marked **AI draft**; edit or remove them, then use **Save draft** as usual. The AI never saves, marks Ready, or submits anything.
+
+- **What is sent:** only the notes you type in that box (up to 2,000 characters) and the report date. Your profile, saved reports, other days, and attendance are never sent. Notes containing email addresses, phone numbers, passwords, tokens, or keys are rejected before anything is sent. Google's data-use terms apply to the notes.
+- **Status:** tasks are marked Ongoing unless your notes clearly say they're done.
+- **Merging:** drafted rows replace an empty editor; otherwise they are appended, so rows you've written are never overwritten.
+- **Setup:** it uses the same `GEMINI_API_KEY` (and optional `GEMINI_MODEL`) as Help. Get a key from Google AI Studio, add it to `apps/web/.env.local` and to Vercel's server environment variables (as a secret, never with a `NEXT_PUBLIC_` prefix), and apply `supabase/migrations/202609300011_ai_draft_request_limits.sql` once. Without a key the panel is hidden; without the migration drafting reports that it's unavailable.
+- **Limits:** 5 drafts per minute and 30 per UTC day per account, one at a time, tracked in the database so they hold across Vercel instances. Only counters are stored, never your notes.
+
 ## Importing an existing report
 
 The Reports editor accepts DOCX and text-based PDF files up to 4 MB. Files are parsed inside the authenticated Node.js application and are not sent to a third-party service or stored automatically.

@@ -46,6 +46,8 @@ export type Database = {
     Functions: {
       acquire_help_request: { Args: Record<string, never>; Returns: string };
       release_help_request: { Args: { permit: string }; Returns: undefined };
+      acquire_ai_draft_request: { Args: Record<string, never>; Returns: string };
+      release_ai_draft_request: { Args: { permit: string }; Returns: undefined };
       report_command: { Args: { command: string; work_day: string; report_id?: string; expected_version?: string; activity_rows?: ActivityRow[] }; Returns: string };
       attendance_summary: {
         Args: { through_date: string };
