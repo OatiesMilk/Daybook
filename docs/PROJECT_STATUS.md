@@ -1,7 +1,7 @@
 # Project Status
 
 **Project:** Daybook - multi-tenant internship attendance and Daily Activity Reports
-**Last updated:** 2026-09-28
+**Last updated:** 2026-09-30
 **Current phase:** Open-signup and calendar implementation complete locally; hosted migration/configuration and live acceptance pending
 **Current signup rollout:** Google registration; email registration disabled by default until SMTP is available. Existing password sign-in remains available.
 **Deployment:** Vercel production in Seoul (`icn1`), colocated with Supabase Seoul (`ap-northeast-2`)
@@ -23,6 +23,10 @@
 - Universal filename DAR_LASTNAME_MMDDYY.docx / .pdf; revisions stored in separate private paths.
 - PDF generation runs server-side via headless Chromium, self-contained in the app's own Vercel deployment.
   No third-party conversion service. (Supersedes the earlier local-computer-only PDF constraint.)
+- Report content stays inside the app's Vercel deployment and Supabase project, with two deliberate, user-approved
+  exceptions that use Google Gemini: Help (one question plus public guidance) and AI drafting (only the notes the student
+  types into the Draft with AI box plus the report date). Saved reports, other days' rows, attendance, and profiles are
+  never sent. Emails, phone numbers, and credentials are blocked before sending. Approved 2026-09-30.
 
 ## Implemented
 
@@ -95,6 +99,16 @@
 - `/api/help` verifies Auth and active access, rejects cross-site calls, bounds streamed JSON to 4 KiB and questions to 800 characters, uses eight-second response/six-second provider/2.5-second limiter RPC deadlines, and returns private/no-store safe errors. Migration 010 adds one private counter row per account and auth-bound security-definer quota/lease commands: 20 accepted requests per fixed minute, 200 per UTC day, one ten-second expiring permit per account across serverless instances. No messages or records are stored. Missing migration/limiter failure fails closed. Existing Supabase configuration suffices; optional `DAYBOOK_HELP_ENABLED=false` disables the API.
 - Hosted migration/application and browser/real-phone acceptance still require verification. A generic time-out question succeeded in a live Gemini smoke test on 2026-09-29 without sending personal records or exposing the key. This is a connectivity check, not a comprehensive model quality evaluation. The UI discloses possible Google processing and AI inaccuracies; Google provider data-use terms apply.
 
+### AI report drafting
+
+- The editable report editor shows a Draft with AI panel when Gemini is configured. The student types rough notes; Gemini returns structured activity rows that are added to the editor as ordinary unsaved rows marked "AI draft". Nothing is saved, marked Ready, or submitted until the student uses the existing Save draft flow.
+- Only the typed notes (up to 2,000 characters) and the report date are sent. Notes containing credentials, emails, or phone numbers (10+ digit runs; dates and times pass) are rejected server-side before any provider call.
+- Output uses Gemini structured JSON (at most 20 rows) and must pass strict key checks plus the existing `validateRows()`; anything else is discarded with a safe message and the editor is left untouched. Status defaults to Ongoing unless the notes clearly say work is done.
+- Drafted rows replace an untouched editor and otherwise append, so typed work is never overwritten; merging reads the latest rows so edits made while drafting are kept. The 100-row report cap still applies.
+- `draftActivitiesAction` verifies Auth and active access, then takes a permit from migration 011's separate quota: 5 per minute, 30 per UTC day, one 20-second lease per account across serverless instances. Provider calls use a 12-second timeout and 32 KiB response cap with no retries. Logs record failure categories only, never notes, rows, or keys.
+- The Gemini REST client is shared with Help (`packages/shared/src/infrastructure/gemini.ts`); Help's behavior is unchanged. No dependency was added.
+- UI: status is announced through a persistent live region, errors use alerts, focus moves to the first drafted row, and drafted rows enter with a 220 ms ease-out fade/rise that reduces to a fade under reduced motion.
+
 ### Visual design
 
 - Primary navigation is Home, Attendance, Calendar, Reports, and More. More opens a desktop dropdown or a mobile menu above its bottom tab, linking directly to Attendance history, All reports, and Profile/account. Current links and the More section are highlighted. Selection, outside pointer interaction, Escape, focus leaving, route navigation, and responsive breakpoint changes dismiss the menu. Arrow keys/Home/End aid keyboard navigation; normal Tab order is preserved without a modal focus trap. Old `/more` bookmarks redirect Home. Mobile retains five safe-area-aware tabs and touch-sized controls. No added dependency or database change.
@@ -129,7 +143,8 @@
 
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
-- [x] Thirty-five automated test groups passed (includes Help FAQs/scope/response validation, authenticated endpoint failures, shared quotas/leases/SQL permissions, today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, and all-reports behavior).
+- [x] `npm run check` on 2026-09-30: 37 tests pass (includes Help FAQs/scope/response validation, authenticated endpoint failures, shared quotas/leases/SQL permissions, today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, all-reports behavior, and AI drafting: input filters, strict output validation, merge rules, mocked Gemini client failures, and the drafting limiter SQL).
+- [ ] Apply migration 011 to hosted Supabase, then run a live Draft with AI smoke test with a real key and review the panel on desktop and a real phone (no authenticated browser session was available to automation).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
 - [x] Owner isolation, anonymous/revoked access, blocked self-enrollment.
@@ -168,6 +183,7 @@
 10. Run npm ci and restart npm run dev.
 11. Sign up, confirm email, complete Profile, add real attendance, save a report, mark Ready, then confirm submission. Export whenever needed.
 12. Apply 202609280010_help_request_limits.sql once before using Daybook Help. Set the optional server-only GEMINI_API_KEY in local/Vercel environments for Gemini answers, or use FAQ-only mode. Help fails unavailable until the shared limiter is present.
+13. Apply 202609300011_ai_draft_request_limits.sql once before using Draft with AI. It uses the same GEMINI_API_KEY; without the key the panel is hidden, and without the migration drafting fails closed with an unavailable message.
 
 Do not rerun migration 001. Existing records are retained. No remote migrations or data changes were performed by the agent.
 `LIBREOFFICE_PATH` is no longer used and was removed from `apps/web/.env.example`; PDF export runs via headless Chromium instead
@@ -185,8 +201,12 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - ESLint 9 is retained for compatibility with the current Next.js React lint plugin.
 - Production deploys from GitHub `main`; no remote migrations were performed by the agent.
 - Open signup depends operationally on hosted Auth configuration: Confirm Email, production SMTP, password policy, Turnstile, the token-hash email template, and exact redirect URLs.
+- AI drafting sends typed notes to Google; Google's data-use terms apply. Names and project details in notes are allowed and disclosed in the UI. The credential/contact filters are conservative and incomplete, and drafted rows can be inaccurate, which is why every row stays editable and unsaved until reviewed.
+- Google's API documentation could not be fetched from the development environment (network egress blocked), so drafting reuses Help's request format, which passed the 2026-09-29 live smoke test. Drafting itself has not been run against the live API yet.
 
 ## Change log
+
+- 2026-09-30: Added Draft with AI in the report editor: typed notes become reviewed, unsaved activity rows via Gemini structured output. Scoped privacy exception approved by the user and documented. New migration 011 (separate 5/minute, 30/day drafting quota); Gemini REST client extracted and shared with Help; no new dependency. Lint, TypeScript, all 37 tests, and production build pass. Live API, hosted migration, and browser/real-phone acceptance pending.
 
 - 2026-09-28: Implemented Daybook-only read-only FAQ chat, approved guidance/source allowlist, authenticated endpoint, distributed database quotas/expiring permits (new migration 010), compact header launcher, desktop popup/mobile sheet, and adversarial/endpoint/SQL permission tests. Lint, TypeScript, all 35 tests, and production build pass. No AI provider, added dependency, remote migration, or deployment. Hosted/real-device acceptance pending.
 

@@ -191,8 +191,19 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
     ::picker(select) { appearance: auto; }
   }
 }
+/* AI drafting: fast ease-out entry for drafted rows, press feedback, and a constant-speed spinner. */
+.ai-draft-submit { transition: transform .16s cubic-bezier(.23, 1, .32, 1), background-color .16s ease, border-color .16s ease; }
+.ai-draft-submit:active:not(:disabled) { transform: scale(.97); }
+.ai-draft-row { transition: opacity .22s cubic-bezier(.23, 1, .32, 1), transform .22s cubic-bezier(.23, 1, .32, 1); }
+@starting-style { .ai-draft-row { opacity: 0; transform: translateY(6px); } }
+.ai-spinner { width: .9rem; height: .9rem; flex: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 999px; animation: ai-spin .6s linear infinite; }
+@keyframes ai-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  /* Reduced motion keeps the comprehension-aiding fade but drops movement. */
+  .ai-draft-row { transition: opacity .18s ease !important; }
+  @starting-style { .ai-draft-row { transform: none; } }
+  .ai-draft-submit:active:not(:disabled) { transform: none; }
 }
 @media (max-width: 700px) {
   .app-main { padding-top: calc(1rem + env(safe-area-inset-top, 0px)); padding-right: max(1rem, env(safe-area-inset-right, 0px)); padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); padding-left: max(1rem, env(safe-area-inset-left, 0px)); }
