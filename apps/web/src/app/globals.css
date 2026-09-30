@@ -305,6 +305,8 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
 .calendar-cell[data-outside="true"], .calendar-cell[data-future="true"] { background: var(--surface-soft); color: var(--muted); }
 .calendar-cell[data-outside="true"] { opacity: .55; }
 .calendar-day-number { font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Weekends can't hold attendance or reports; a quieter number lets the workday columns lead. */
+.calendar-cell[data-weekend="true"] .calendar-day-number { color: var(--muted); font-weight: 500; }
 .calendar-hours { font-size: .8rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.3; }
 .calendar-hours[data-open="true"] { color: var(--muted); font-weight: 500; overflow-wrap: anywhere; }
 .calendar-badges { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: auto; max-width: 100%; }

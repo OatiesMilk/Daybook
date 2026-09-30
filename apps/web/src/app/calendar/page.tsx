@@ -60,7 +60,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             {absent && <span className="status calendar-status" data-tone="danger">Absent</span>}
             {report && <span className="status calendar-status" data-tone={report.needs_review ? "warning" : report.status === "submitted" ? "success" : undefined}>{report.needs_review ? "Needs review" : statusLabel[report.status]}</span>}
           </span>}</>;
-          return <div role="gridcell" key={day.date} aria-current={day.date === today ? "date" : undefined} className="calendar-cell" data-selected={day.date === selectedDate || undefined} data-outside={!day.inMonth || undefined} data-future={day.inMonth && day.date > today || undefined}>
+          return <div role="gridcell" key={day.date} aria-current={day.date === today ? "date" : undefined} className="calendar-cell" data-selected={day.date === selectedDate || undefined} data-outside={!day.inMonth || undefined} data-future={day.inMonth && day.date > today || undefined} data-weekend={!isWorkday(day.date) || undefined}>
             {eligible ? <Link href={`/calendar?month=${month}&date=${day.date}#day-details`} aria-label={`View ${day.date}${absent ? ", absent" : ""}${missingReport ? ", missing report" : ""}${report ? `, report ${report.needs_review ? "needs review" : statusLabel[report.status].toLowerCase()}` : ""}${hoursLabel ? `, ${hoursLabel}${creditedMinutes != null ? " credited" : ""}` : ""}`}>{contents}</Link> : <div>{contents}</div>}
           </div>;
         })}
