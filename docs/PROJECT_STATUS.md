@@ -206,6 +206,8 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 
 ## Change log
 
+- 2026-09-30: Moved Import from file out of the editing card into the Reports sidebar, as its own panel under Report history. The sidebar sticks beside the editor on wide screens and scrolls internally when an import review is taller than the window; on phones it stacks below the editor, and applying imported rows moves focus to the first filled row. Import behavior is unchanged. Lint, TypeScript, all 37 tests, and production build pass; authenticated browser review pending.
+
 - 2026-09-30: Added Draft with AI in the report editor: typed notes become reviewed, unsaved activity rows via Gemini structured output. Scoped privacy exception approved by the user and documented. New migration 011 (separate 5/minute, 30/day drafting quota); Gemini REST client extracted and shared with Help; no new dependency. Lint, TypeScript, all 37 tests, and production build pass. Live API, hosted migration, and browser/real-phone acceptance pending.
 
 - 2026-09-28: Implemented Daybook-only read-only FAQ chat, approved guidance/source allowlist, authenticated endpoint, distributed database quotas/expiring permits (new migration 010), compact header launcher, desktop popup/mobile sheet, and adversarial/endpoint/SQL permission tests. Lint, TypeScript, all 35 tests, and production build pass. No AI provider, added dependency, remote migration, or deployment. Hosted/real-device acceptance pending.

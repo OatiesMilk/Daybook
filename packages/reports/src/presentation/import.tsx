@@ -118,11 +118,11 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
   const hoursMatch = result && result.header.statedMinutes !== null && result.attendanceMinutes !== null
     ? result.header.statedMinutes === result.attendanceMinutes : null;
 
-  return <section className="rounded-lg border border-line bg-soft p-4" aria-labelledby={`${inputId}-title`}>
-    <h3 id={`${inputId}-title`} className="font-bold">Import from file</h3>
-    <p className="muted-copy mt-1">Upload a DOCX or PDF to review extracted details. Nothing is saved automatically.</p>
-    <form onSubmit={upload} className="mt-4 flex flex-wrap items-end gap-3">
-      <label className="w-full max-w-md" htmlFor={inputId}>Daily Activity Report
+  return <section className="panel min-w-0" aria-labelledby={`${inputId}-title`}>
+    <h2 id={`${inputId}-title`} className="section-title">Import from file</h2>
+    <p className="muted-copy mt-2">Upload a DOCX or PDF to review extracted details. Nothing is saved automatically.</p>
+    <form onSubmit={upload} className="mt-5 flex flex-wrap items-end gap-3">
+      <label className="w-full" htmlFor={inputId}>Daily Activity Report
         <input ref={fileInput} id={inputId} name="report" type="file" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required
           onChange={event => { setSelectedFile(event.target.files?.[0]?.name ?? ""); setResult(null); setRows([]); setError(""); }} />
       </label>

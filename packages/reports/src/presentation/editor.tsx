@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { reportAction } from "@dtr/reports/application/actions";
 import { formatReportDate, type ActivityRow, type Report } from "@dtr/reports/domain/rules";
@@ -8,6 +8,7 @@ import { mergeDraftRows } from "@dtr/reports/domain/ai-draft";
 import { formatMinutes } from "@dtr/attendance/domain/index";
 import { ReportImport } from "@dtr/reports/presentation/import";
 import { AiDraft } from "@dtr/reports/presentation/ai-draft";
+import { ReportSidebar } from "@dtr/reports/presentation/sidebar";
 
 function Command({ report, command, label, primary = false, danger = false }: { report: Report; command: string; label: string; primary?: boolean; danger?: boolean }) {
   const [state, action, pending] = useActionState(reportAction, { error: "" });
@@ -20,7 +21,7 @@ function Command({ report, command, label, primary = false, danger = false }: { 
   </form>;
 }
 
-export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false }: { report: Report | null; date: string; isLatest: boolean; aiDraftEnabled?: boolean }) {
+export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, sidebar }: { report: Report | null; date: string; isLatest: boolean; aiDraftEnabled?: boolean; sidebar?: ReactNode }) {
   const empty: ActivityRow = { project: "", task: "", status: "Ongoing", remarks: "" };
   const [rows, setRows] = useState<ActivityRow[]>(report?.rows.length ? report.rows : [{ ...empty }]);
   // Stable per-row IDs let drafted rows animate in and keep their "AI draft" badge
@@ -34,7 +35,12 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false }:
   const editable = (!report || report.status === "draft") && isLatest;
   const unsaved = report ? JSON.stringify(rows) !== JSON.stringify(report.rows) : true;
   const applyImportedRows = useCallback((imported: ActivityRow[]) => {
-    setRows(imported); setIds(imported.map(() => newId())); setAiIds(new Set()); return true;
+    const added = imported.map(() => newId());
+    setRows(imported); setIds(added); setAiIds(new Set());
+    // Import now lives in the sidebar (below the editor on phones), so move focus,
+    // and with it the viewport, to the rows that were just filled.
+    focusId.current = added[0] ?? null;
+    return true;
   }, [newId]);
   // Drafting takes seconds and rows stay editable meanwhile, so merge from the latest rows,
   // not the ones captured when the request started.
@@ -61,12 +67,11 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false }:
   }
   function update(index: number, key: keyof ActivityRow, value: string) { setRows(current => current.map((row, i) => i === index ? { ...row, [key]: value } : row)); clearAiMark(index); }
   function remove(index: number) { setRows(current => current.filter((_, i) => i !== index)); setIds(current => current.filter((_, i) => i !== index)); }
-  return <section className="space-y-6">
+  return <><div className="min-w-0"><section className="space-y-6">
     <div className="panel"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="section-title"><time dateTime={date}>{formatReportDate(date)}</time></h2><span className="status" data-tone={report?.needs_review ? "warning" : report?.status === "submitted" ? "success" : undefined}>{report ? `${report.status === "draft" ? "Draft" : report.status === "ready" ? "Ready" : "Submitted"} · version ${report.revision}` : "New draft"}</span></div>
       {report?.needs_review && <p role="alert" className="notice mt-4" data-tone="warning">Attendance changed after this report was saved. Its hours may be outdated. {isLatest ? "Create an updated version below; this version stays saved." : <><Link className="font-semibold underline" href={`/reports?date=${date}`}>Open the latest version</Link> to continue. This older version stays saved.</>}</p>}
       {report?.snapshot && <div className="mt-5 border-t border-line pt-4 text-sm leading-7"><p>{report.snapshot.profile.full_name} · {report.snapshot.profile.school}</p><p>{report.snapshot.profile.department}</p><p className="font-semibold">Cumulative hours: {formatMinutes(report.snapshot.totalMinutes)}</p></div>}
       {editable && aiDraftEnabled && <div className="mt-6"><AiDraft date={date} applyDraft={applyDraft} /></div>}
-      {editable && <div className="mt-6"><ReportImport currentDate={date} editable={editable} currentRows={rows} applyRows={applyImportedRows} /></div>}
       {editable ? <form action={action} className="mt-6 space-y-5">
         <input type="hidden" name="date" value={date} /><input type="hidden" name="id" value={report?.id ?? ""} /><input type="hidden" name="version" value={report?.updated_at ?? ""} /><input type="hidden" name="command" value="save" /><input type="hidden" name="rows" value={JSON.stringify(rows)} />
         <fieldset disabled={pending} className="space-y-5">{rows.map((row, index) => { const rowId = ids[index] ?? `fallback-${index}`; const drafted = aiIds.has(rowId); return <div key={rowId} className={`border-t border-line pt-5 first:border-t-0 first:pt-0${drafted ? " ai-draft-row" : ""}`}>
@@ -92,5 +97,9 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false }:
       {isLatest && report.status === "draft" && <div className="border-t border-line pt-5"><h3 className="font-bold">Cancel this draft</h3><p className="muted-copy mt-1 mb-3">This removes only the current draft. Earlier Ready or Submitted versions stay saved.</p><Command report={report} command="delete" label="Delete draft" danger /></div>}
       <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline" href={`/attendance?date=${date}`}>Open attendance for this date</Link>
     </div>}
-  </section>;
+  </section></div>
+  <ReportSidebar>
+    {sidebar}
+    {editable && <ReportImport currentDate={date} editable={editable} currentRows={rows} applyRows={applyImportedRows} />}
+  </ReportSidebar></>;
 }
