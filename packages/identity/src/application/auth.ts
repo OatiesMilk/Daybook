@@ -1,9 +1,12 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@dtr/shared/infrastructure/supabase/server";
 import { supabaseConfig } from "@dtr/shared/infrastructure/supabase/config";
 
-export async function requireOwner() {
+// cache() dedupes calls within one server render, so the page and its header
+// share a single verified session and access check instead of repeating them.
+export const requireOwner = cache(async function requireOwner() {
   if (!supabaseConfig()) redirect("/setup");
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -13,7 +16,7 @@ export async function requireOwner() {
   if (accessError) throw new Error("Unable to verify account access. Check the database migration and connection.");
   if (!access?.active) redirect("/access-denied");
   return { supabase, user };
-}
+});
 
 export function siteOrigin() {
   const value = process.env.SITE_URL;

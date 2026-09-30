@@ -67,7 +67,7 @@ export async function handleHelp(request: Request, dependencies: Dependencies, t
         const safeName = name?.replace(/[<>`\r\n]/g, "").trim().slice(0, 150);
         reply = { context, sources: [], text: safeName && !/(?:https?:|www\.|\]\()/i.test(safeName)
           ? `You're signed in as ${safeName}. This is the account associated with your current session.`
-          : "You're signed into your own Daybook account. I couldn't load your profile name; open Profile/account in More to check it." };
+          : "You're signed into your own Daybook account. I couldn't load your profile name; open the account menu (your initials, top right) to check it." };
       } else if (context === "model") {
         reply = { context, sources: [], text: dependencies.model?.enabled
           ? `Daybook Help is configured to use Google Gemini (${dependencies.model.name}). Some replies come from the built-in FAQ fallback when Gemini is unavailable. This model information is provided directly by Daybook.`

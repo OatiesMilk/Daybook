@@ -29,7 +29,6 @@ export function WorkspaceNav() {
 const moreItems = [
   ["/history", "Attendance history"],
   ["/reports/all", "All reports"],
-  ["/settings", "Profile and account"],
 ] as const;
 
 function MoreMenu({ pathname }: { pathname: string }) {

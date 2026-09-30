@@ -31,5 +31,7 @@ test("other report actions are still refused, and existing answers keep working"
   assert.deepEqual(ids("how do I create a report"), ["draft"]);
   assert.deepEqual(ids("what can you do"), ["help-capabilities"]);
   assert.deepEqual(ids("how do I record time out?"), ["time-out"]);
+  assert.deepEqual(ids("how do I sign out?"), ["account-menu"]);
+  assert.deepEqual(ids("how do I switch to dark mode"), ["account-menu"]);
   assert.equal(canAskModel("how does drafting with AI work"), true);
 });

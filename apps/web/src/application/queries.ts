@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { requireOwner } from "@dtr/identity/application/auth";
 import { attendanceReminders, completionEstimate, internshipClockMinutes, internshipToday, isWorkday, reminderWindow, validateWorkday } from "@dtr/attendance/domain/index";
 import { attendanceForMonth, attendanceSummary, findAttendance, listAttendance, openAttendance, recentWorkedAttendance } from "@dtr/attendance/infrastructure/repository";
@@ -89,7 +90,13 @@ export async function calendarData(requestedMonth?: string) {
   return { today, month, reports, attendance };
 }
 
-export async function profileData() {
+// Cached per render so the Profile page and the header's account menu share one read.
+export const profileData = cache(async function profileData() {
   const { supabase, user } = await requireOwner();
   return getProfile(supabase, user.id);
+});
+
+export async function accountData() {
+  const [{ user }, profile] = await Promise.all([requireOwner(), profileData()]);
+  return { name: profile?.full_name?.trim() || null, email: user.email ?? null };
 }
