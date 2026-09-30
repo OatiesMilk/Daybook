@@ -15,7 +15,7 @@ Record weekday attendance and daily activities, track progress toward 486 credit
 A private personal record that connects attendance, cumulative credited hours, report revisions, and archived exports for one internship.
 
 ## Operating Context
-The student saves time in at the start of a workday, can finish the entry later, and may mark a weekday absent. They review attendance history, write activity rows, export a report, and confirm submission after sending it to their project manager. Saved attendance supplies Viber login and logout messages.
+The student saves time in at the start of a workday, can finish the entry later, and may mark a weekday absent. They review attendance history, write activity rows, export a report, and confirm submission after sending it to their project manager.
 
 ## Capabilities and Constraints
 - Keep the existing Next.js App Router, React, TypeScript, Tailwind, Supabase, and clean symmetric monorepo boundaries.

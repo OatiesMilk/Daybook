@@ -3,7 +3,7 @@
 Next.js + TypeScript + Tailwind + Supabase, designed for Vercel.
 
 The app is an open multi-tenant product with self-serve email/password and Google signup, per-student data isolation, attendance CRUD/history,
-calendar navigation, configurable progress targets, Viber message copying, profile settings, daily report revisions, reviewed DOCX/PDF imports, and private DOCX/PDF exports.
+calendar navigation, configurable progress targets, profile settings, daily report revisions, reviewed DOCX/PDF imports, and private DOCX/PDF exports.
 Both formats are generated on the server (PDF via headless Chromium) and work from any device, including on Vercel.
 
 ## Upgrade your existing setup
@@ -20,6 +20,7 @@ Supabase SQL Editor (copy the complete contents of each file into a new query an
 7. `supabase/migrations/202609210008_profile_target_hours.sql`
 8. `supabase/migrations/202609280009_open_signup_provisioning.sql`
 9. `supabase/migrations/202609280010_help_request_limits.sql`
+10. `supabase/migrations/202609300011_ai_draft_request_limits.sql`
 
 Do not rerun `202609180001_foundation.sql` if you already applied it. The new migrations retain existing records.
 The reports migration also creates the private `dar-exports` storage bucket and its access policies.
@@ -36,16 +37,15 @@ Your existing Supabase values were preserved. Never commit `apps/web/.env.local`
 1. After verifying your email, open **Profile** and save your name, last name, school, department/team, and required internship hours.
 2. Open **Attendance**, choose a weekday, and save your times. New entries suggest 6:30 PM for time out; clear it to save time in only. Select office/WFH and overtime as needed, or mark the day absent for zero hours.
 3. Use **History** to edit the date/times, change an absence to attendance, or delete an entry with confirmation. Only completed worked entries earn credit.
-4. Copy Viber messages from saved attendance. Both office and WFH currently use `@office`.
-5. Open **Reports**, choose a day, enter activity rows, and **Save draft**.
+4. Open **Reports**, choose a day, enter activity rows, and **Save draft**.
    You can also use **Import from file**: DOCX imports activity rows and report headers; PDF imports headers only because PDF text does not preserve reliable table cells. Review everything before applying it to the editor.
-6. Download DOCX or PDF from a saved Draft even while attendance is in progress. Draft previews use completed attendance totals, exclude the open entry until time out is saved, and are not archived.
-7. **Mark Ready** after attendance and activities are complete. This freezes a snapshot of the rows, profile, and cumulative hours through that date. Ready and Submitted DOCX downloads are archived in private Supabase Storage. PDF downloads render the saved snapshot with the current template, including past reports.
-8. After you actually send the report, check the submission confirmation and **Mark Submitted**. Downloads are optional.
-9. To correct a frozen report, **Reopen as a new draft revision**. Old snapshots and files remain unchanged.
-10. Use **Calendar** to review daily hours, absences, monthly totals, and day details with attendance/report links. **More** opens a dropdown on desktop or a menu above its mobile tab for Attendance history, All reports, and Profile/account—no intermediate page. Select a link, click outside, or press Escape to close; arrow keys also navigate the links.
-11. Home estimates your completion date from the last 10 completed workdays. It assumes future Monday–Friday work, starting after today; holidays and future leave are not included.
-12. Tap the header bell for a reminder popup (desktop) or bottom sheet (mobile), with a count of enabled, undismissed reminders. The panel includes actions, dismiss/restore controls, and expandable preferences. It opens only when requested and closes with Close, Escape, or an outside click. Reminders cover the last 30 days. Today's time-out and DAR reminders start at **6:20 PM Philippine time**, ten minutes before standard 6:30 PM time out. DAR reminders continue through Draft/Ready until you send the report and mark it Submitted; reports needing review remain flagged. Completed attendance can prompt DAR earlier. Data refreshes every minute while the app is visible and on opening the panel. Preferences/dismissals are account-scoped in this browser only; no email, push delivery, or automatic report submission is enabled. Old `/notifications` bookmarks redirect Home.
+5. Download DOCX or PDF from a saved Draft even while attendance is in progress. Draft previews use completed attendance totals, exclude the open entry until time out is saved, and are not archived.
+6. **Mark Ready** after attendance and activities are complete. This freezes a snapshot of the rows, profile, and cumulative hours through that date. Ready and Submitted DOCX downloads are archived in private Supabase Storage. PDF downloads render the saved snapshot with the current template, including past reports.
+7. After you actually send the report, check the submission confirmation and **Mark Submitted**. Downloads are optional.
+8. To correct a frozen report, **Reopen as a new draft revision**. Old snapshots and files remain unchanged.
+9. Use **Calendar** to review daily hours, absences, monthly totals, and day details with attendance/report links. **More** opens a dropdown on desktop or a menu above its mobile tab for Attendance history, All reports, and Profile/account—no intermediate page. Select a link, click outside, or press Escape to close; arrow keys also navigate the links.
+10. Home estimates your completion date from the last 10 completed workdays. It assumes future Monday–Friday work, starting after today; holidays and future leave are not included.
+11. Tap the header bell for a reminder popup (desktop) or bottom sheet (mobile), with a count of enabled, undismissed reminders. The panel includes actions, dismiss/restore controls, and expandable preferences. It opens only when requested and closes with Close, Escape, or an outside click. Reminders cover the last 30 days. Today's time-out and DAR reminders start at **6:20 PM Philippine time**, ten minutes before standard 6:30 PM time out. DAR reminders continue through Draft/Ready until you send the report and mark it Submitted; reports needing review remain flagged. Completed attendance can prompt DAR earlier. Data refreshes every minute while the app is visible and on opening the panel. Preferences/dismissals are account-scoped in this browser only; no email, push delivery, or automatic report submission is enabled. Old `/notifications` bookmarks redirect Home.
 
 Attendance changes flag Ready/Submitted reports on or after the affected date for review.
 Universal filenames are `DAR_LASTNAME_MMDDYY.docx` and `.pdf`, for example `DAR_AKIA_091726.docx`.
@@ -113,7 +113,7 @@ The app flag controls the signup page and server action. It does not disable Sup
 
 Use a dedicated Supabase project for Daybook.
 
-1. Apply all nine files in `supabase/migrations/` in filename order, once each, using the Supabase SQL editor
+1. Apply all eleven files in `supabase/migrations/` in filename order, once each, using the Supabase SQL editor
    (or your normal Supabase migration workflow). Keep subsequent changes in new migrations.
 2. In Authentication settings, enable new-user signup and **Confirm Email**. Keep anonymous sign-ins disabled. Set a minimum password length of at least 8 and the strongest practical character requirements. Enable leaked-password protection when the project plan supports it.
 3. Configure production SMTP. Supabase's built-in email sender is intended for testing and has a very low project-wide delivery limit.

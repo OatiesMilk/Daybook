@@ -16,7 +16,6 @@
 - Configurable per-user internship target, required during first-time profile setup. No opening balance. Historical records are entered individually.
 - Sample reconciliation: 62h 30m through September 17, 2026.
 - Date/time corrections allowed; duplicate dates rejected; deletion requires confirmation.
-- Viber copied messages use @office for both locations.
 - One DAR per date with revisions; Draft -> Ready -> Submitted.
 - Ready requires completed attendance, a complete profile, and at least one complete activity row.
 - Reopening retains earlier snapshots and exports; attendance corrections flag frozen reports for review.
@@ -52,7 +51,6 @@
 - Dashboard: hours-recorded hero with quarter milestones, worked days, remaining hours, average worked day and estimated worked days left; a Today card that shows today’s attendance state and next action; earlier unfinished days with an all-caught-up state; shortcuts to reports and history.
 - Today card includes a compact activity-report section on weekdays: latest saved status, nonblank saved activity count, and Start report/Continue draft/Open ready report/View report/Review report action. Open attendance includes a write-now/finalize-after-time-out hint. The report link is secondary and attendance remains the primary action. Desktop top cards share the tallest content-driven height with the attendance action bottom-aligned; mobile cards stack at natural heights. Shortcuts form a full-width responsive strip. Needs attention is a full-width panel only for unfinished earlier entries; otherwise a compact attendance-caught-up message appears. One owner/date-scoped, latest-revision report query runs alongside existing dashboard reads; no migration or new dependency.
 - In progress: an open entry is In progress on its own date and Unfinished on any earlier date (derived from the date, no schema change). The form has an In progress checkbox for today; the Today card and history show the label.
-- Copy saved Viber login/logout messages with manual-copy fallback.
 
 ### Reports
 
@@ -205,6 +203,8 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Google's API documentation could not be fetched from the development environment (network egress blocked), so drafting reuses Help's request format, which passed the 2026-09-29 live smoke test. Drafting itself has not been run against the live API yet.
 
 ## Change log
+
+- 2026-09-30: Removed Viber message copying at the user's request: the attendance-form panel, its clipboard copy button, the `viberMessage` helper, its test assertions, and all documentation mentions. No database, API, Help, or report behavior depended on it. With only the delete panel left in the side column, new attendance entries use a single readable column. Also corrected the README migration list (added 011) and count (eleven files). Lint, TypeScript, all 40 tests, and production build pass.
 
 - 2026-09-30: UI fixes from user review, guided by the design-engineering, mobile-native, animate, and apple-design skills. Disabled buttons now show a not-allowed cursor instead of `wait` (busy buttons already say "Saving…"/"Drafting…"). Form fields no longer inherit bold 600 weight from their labels: typed values are 400 weight at 14px with a mouse and 16px on touch screens, which also stops iOS zooming when a field is focused. On phones the calendar becomes a native-style month view: day numbers with one status dot per state, today in the accent color, the selected day filled, one-letter weekdays, and a dot legend. The cryptic A/M/D/R/S/! letter codes were removed, and day links now announce report status to screen readers. Desktop calendar is unchanged. Lint, TypeScript, all 40 tests, and production build pass; computed styles and screenshots were checked with the compiled CSS. Real-phone review pending.
 

@@ -4,19 +4,6 @@ import { useActionState, useState } from "react";
 import { calculateAttendance, formatMinutes } from "@dtr/attendance/domain/index";
 import type { Attendance } from "@dtr/shared/infrastructure/database.types";
 import { saveAttendanceAction, deleteAttendanceAction } from "@dtr/attendance/application/actions";
-import { viberMessage } from "@dtr/attendance/domain/rules";
-
-function CopyMessage({ time, direction }: { time: string; direction: "login" | "logout" }) {
-  const [notice, setNotice] = useState("");
-  const message = viberMessage(time, direction);
-  async function copy() {
-    try { await navigator.clipboard.writeText(message); setNotice("Copied"); }
-    catch { setNotice("Copy unavailable. Select the message and copy it manually."); }
-  }
-  return <div className="mt-3 rounded-lg bg-paper p-4"><div className="flex flex-wrap items-center justify-between gap-3">
-    <code className="select-all text-sm">{message}</code><button type="button" onClick={copy} className="secondary-button" aria-label={`Copy ${direction} message`}>Copy</button>
-  </div><p role="status" className="mt-1 text-xs text-muted">{notice}</p></div>;
-}
 
 export function AttendanceForm({ record, initialDate, today }: { record: Attendance | null; initialDate: string; today: string }) {
   const [state, action, pending] = useActionState(saveAttendanceAction, { error: "" });
@@ -35,7 +22,8 @@ export function AttendanceForm({ record, initialDate, today }: { record: Attenda
       preview = `${formatMinutes(credit.regularMinutes)} regular + ${formatMinutes(credit.overtimeMinutes)} overtime = ${formatMinutes(credit.totalMinutes)} credited`;
     } catch (error) { preview = error instanceof Error ? error.message : "Check your times."; }
   }
-  return <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
+  // The side column only holds deletion, so a new entry uses one readable column.
+  return <div className={record ? "grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]" : "max-w-3xl"}>
     <section className="panel"><h2 className="section-title">{record ? "Edit attendance" : "Record attendance"}</h2>
       <form action={action} className="mt-6 space-y-5">
         <input type="hidden" name="original_date" value={record?.work_date ?? ""} /><input type="hidden" name="version" value={record?.updated_at ?? ""} />
@@ -58,17 +46,14 @@ export function AttendanceForm({ record, initialDate, today }: { record: Attenda
         </fieldset>
       </form>
     </section>
-    <aside className="space-y-6">
-      <section className="panel"><h2 className="section-title">Viber messages</h2><p className="muted-copy mt-2">Copy a message from your saved attendance, then send it to your project manager.</p>
-        {record?.absent ? <p className="mt-4 text-sm text-muted">No login or logout message for an absent day.</p> : record?.time_in ? <><CopyMessage time={record.time_in} direction="login" />{record.time_out && <CopyMessage time={record.time_out} direction="logout" />}</> : <p className="mt-4 text-sm text-muted">Save your time in to prepare a message.</p>}
-      </section>
-      {record && <section className="panel"><h2 className="font-semibold">Delete this record</h2><p className="mt-2 text-sm text-muted">This removes the day’s attendance and recalculates your hours.</p>
+    {record && <aside className="space-y-6">
+      <section className="panel"><h2 className="font-semibold">Delete this record</h2><p className="mt-2 text-sm text-muted">This removes the day’s attendance and recalculates your hours.</p>
         <form action={deleteAction} className="mt-4 space-y-4"><input type="hidden" name="original_date" value={record.work_date} /><input type="hidden" name="version" value={record.updated_at} />
           <div><label className="checkbox-option"><input type="checkbox" required name="confirm" /><span>Delete attendance for {record.work_date}</span></label></div>
           {deletion.error && <p role="alert" className="notice" data-tone="danger">{deletion.error}</p>}
           <button className="secondary-button danger-button" disabled={deleting || pending}>{deleting ? "Deleting…" : "Delete attendance"}</button>
         </form>
-      </section>}
-    </aside>
+      </section>
+    </aside>}
   </div>;
 }

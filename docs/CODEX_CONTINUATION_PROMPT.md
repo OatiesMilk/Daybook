@@ -188,7 +188,7 @@ If a hosted provider is approved:
 - Keep Supabase Storage private and owner-scoped.
 - Do not use a Supabase service-role key unless a documented server-only requirement cannot be met safely with user-scoped access. Explain and test any exception.
 - Do not weaken RLS, make the export bucket public, or trust a hidden UI control as authorization.
-- Do not send Viber messages, submit reports, or contact other people automatically.
+- Do not submit reports or contact other people automatically.
 - Avoid logging private report data and credentials.
 - Review dependency vulnerabilities and avoid unnecessary packages.
 
@@ -201,7 +201,6 @@ If a hosted provider is approved:
 - Regular hours are the overlap with 08:30-12:00 and 13:00-18:30.
 - Optional overtime counts actual work after 18:30.
 - Time before 08:30, weekends, future dates, and overnight records are not credited or accepted according to existing rules.
-- Office and work-from-home entries currently generate `@office` Viber text.
 - Historical attendance is entered individually; there is no synthetic opening balance.
 - The report lifecycle is Draft -> Ready -> Submitted.
 - Ready requires completed attendance, a complete profile, and at least one complete activity.

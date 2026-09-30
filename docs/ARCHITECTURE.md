@@ -27,7 +27,7 @@ There is no opening balance. The sample's 3,750 minutes through 2026-09-17 is on
 
 Insert rejects duplicates. Update/delete includes the original date, owner ID, and last-seen timestamp to reject stale edits.
 SQL-generated credits prevent inflated totals supplied by clients. History is paginated. Summary aggregation runs in PostgreSQL,
-not on the first API page of results. Saved entries supply Viber text; no messages are sent automatically.
+not on the first API page of results.
 
 ## Reports and revisions
 

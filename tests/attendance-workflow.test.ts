@@ -1,17 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseAttendanceForm, validateAttendance, viberMessage } from "../packages/attendance/src/domain/rules.ts";
+import { parseAttendanceForm, validateAttendance } from "../packages/attendance/src/domain/rules.ts";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile } from "node:fs/promises";
 
-test("open attendance, future-date validation and Viber text", () => {
+test("open attendance and future-date validation", () => {
   const entry = { work_date: "2026-09-18", time_in: "13:00", time_out: null, work_location: "home" as const, overtime_enabled: true, absent: false };
   assert.equal(validateAttendance(entry, "2026-09-18").time_out, null);
   assert.throws(() => validateAttendance(entry, "2026-09-17"), /future/);
   assert.throws(() => validateAttendance({ ...entry, time_out: "12:00" }, "2026-09-18"), /after/);
-  assert.equal(viberMessage("08:30:00", "login"), "@office login 8:30am");
-  assert.equal(viberMessage("18:30", "logout"), "@office logout 6:30pm");
-  assert.equal(viberMessage("12:00", "login"), "@office login 12:00pm");
   const absent = { ...entry, time_in: null, time_out: null, overtime_enabled: false, absent: true };
   assert.deepEqual(validateAttendance(absent, "2026-09-18"), absent);
   assert.throws(() => validateAttendance({ ...absent, time_in: "08:30" }, "2026-09-18"), /Absent/);

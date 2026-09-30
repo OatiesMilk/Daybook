@@ -25,12 +25,6 @@ export function validateAttendance(values: AttendanceValues, today = internshipT
   return values;
 }
 
-export function viberMessage(time: string, direction: "login" | "logout") {
-  const minutes = parseTime(time.slice(0, 5));
-  const hour = Math.floor(minutes / 60);
-  return `@office ${direction} ${hour % 12 || 12}:${String(minutes % 60).padStart(2, "0")}${hour < 12 ? "am" : "pm"}`;
-}
-
 export function parseAttendanceForm(form: FormData): AttendanceValues {
   const text = (name: string) => { const value = form.get(name); return typeof value === "string" ? value : ""; };
   const location = text("work_location");
