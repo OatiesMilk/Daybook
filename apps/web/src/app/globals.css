@@ -60,7 +60,9 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button, a, [role="button"] { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 button { cursor: pointer; }
-button:disabled { cursor: wait; opacity: .62; }
+/* Disabled means "not available right now" (e.g. no file chosen yet), not "loading":
+   busy buttons already say so in their label ("Saving…", "Drafting…"). */
+button:disabled { cursor: not-allowed; opacity: .62; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 a { text-underline-offset: .2em; }
 a:hover { color: var(--link-hover); }
@@ -69,7 +71,10 @@ label { display: block; min-width: 0; font-size: .875rem; font-weight: 600; colo
 .checkbox-option { display: inline-flex; align-items: center; gap: .75rem; width: fit-content; max-width: 100%; min-height: 2.75rem; border: 1px solid var(--line-strong); border-radius: .55rem; background: var(--surface); padding: .5rem .75rem; cursor: pointer; }
 .checkbox-option input[type="checkbox"] { margin: 0; }
 label input:not([type="checkbox"]), label select, label textarea { margin-top: .45rem; }
-input:not([type="checkbox"]), select, textarea { min-width: 0; width: 100%; min-height: 2.85rem; border: 1px solid var(--line-strong); border-radius: .55rem; padding: .65rem .8rem; background: var(--surface); color: var(--ink); font: inherit; }
+/* Typed values are regular weight so they read as content, while labels (600) read as
+   structure. Fields no longer inherit bold 600 from their <label>. 14px suits a mouse;
+   touch screens get 16px below (the (pointer: coarse) rule) so iOS never zooms on focus. */
+input:not([type="checkbox"]), select, textarea { min-width: 0; width: 100%; min-height: 2.85rem; border: 1px solid var(--line-strong); border-radius: .55rem; padding: .65rem .8rem; background: var(--surface); color: var(--ink); font: inherit; font-size: .875rem; font-weight: 400; line-height: 1.5; }
 /* Safari's native date/time fields have intrinsic sizes that can exceed narrow
    labels. Size their outer box explicitly while retaining the native picker. */
 input:is([type="date"], [type="time"], [type="month"]) { appearance: none; -webkit-appearance: none; display: block; box-sizing: border-box; max-width: 100%; min-inline-size: 0; }
@@ -304,7 +309,13 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
 .calendar-hours[data-open="true"] { color: var(--muted); font-weight: 500; overflow-wrap: anywhere; }
 .calendar-badges { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: auto; max-width: 100%; }
 .calendar-status { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.calendar-status-short { display: none; }
+/* Phone-only month view pieces (iOS Calendar pattern): dots, one-letter weekdays, dot legend. */
+.calendar-dots, .calendar-weekday-short, .calendar-legend, .calendar-legend-hint { display: none; }
+.calendar-dot { width: .4rem; height: .4rem; flex: none; border-radius: 999px; background: var(--muted); }
+.calendar-dot[data-tone="success"] { background: var(--success-ink); }
+.calendar-dot[data-tone="info"] { background: var(--accent); }
+.calendar-dot[data-tone="warning"] { background: var(--warning-ink); }
+.calendar-dot[data-tone="danger"] { background: var(--danger-ink); }
 .workspace-header-tools { display: flex; align-items: center; gap: .5rem; min-width: 0; }
 .notification-bell { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 2.75rem; min-height: 2.75rem; border: 1px solid var(--line); border-radius: .55rem; background: var(--surface); color: var(--ink); flex: none; }
 .notification-bell:active { background: var(--row-hover); }
@@ -392,12 +403,22 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
   .calendar-summary dd { font-size: 1.15rem; }
   .calendar-detail-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .calendar-month-picker label { width: 100%; }
+  /* Phones: a compact month grid of day numbers and status dots; words live in day details. */
   .calendar-panel { padding: .75rem; }
-  .calendar-cell { min-height: 4.75rem; }
-  .calendar-cell > :is(a, div) { gap: .35rem; padding: .4rem; }
-  .calendar-weekday { padding: .5rem .15rem; font-size: .65rem; }
-  .calendar-hours { font-size: .65rem; }
-  .calendar-status { min-height: 1.35rem; padding: .15rem .35rem; font-size: .65rem; }
-  .calendar-status-full { display: none; }
-  .calendar-status-short { display: inline; }
+  .calendar-grid { border: 0; border-radius: 0; }
+  .calendar-weekday { border-bottom: 0; background: none; padding: .35rem 0; font-size: .75rem; }
+  .calendar-weekday-long, .calendar-hours, .calendar-badges { display: none; }
+  .calendar-weekday-short { display: inline; }
+  .calendar-cell { min-height: 3.25rem; border-right: 0; border-bottom: 0; background: none; }
+  .calendar-cell[data-outside="true"], .calendar-cell[data-future="true"] { background: none; }
+  .calendar-cell[aria-current="date"] { box-shadow: none; }
+  .calendar-cell[data-selected="true"] { background: none; color: inherit; }
+  .calendar-cell > :is(a, div) { align-items: center; gap: .3rem; border-radius: .6rem; padding: .35rem 0; }
+  .calendar-day-number { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 999px; font-size: .95rem; font-weight: 500; }
+  .calendar-cell[aria-current="date"] .calendar-day-number { color: var(--accent); font-weight: 700; }
+  .calendar-cell[data-selected="true"] .calendar-day-number { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .calendar-dots { display: flex; gap: .2rem; }
+  .calendar-legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: 1rem; padding-top: .9rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+  .calendar-legend li { display: inline-flex; align-items: center; gap: .4rem; }
+  .calendar-legend-hint { display: inline; }
 }

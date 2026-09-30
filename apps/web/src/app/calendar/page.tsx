@@ -4,9 +4,10 @@ import { WorkspaceHeader } from "@/components/workspace-header";
 import { attendanceState, calendarCredit, calendarSummary, formatMinutes, isWorkday } from "@dtr/attendance/domain/index";
 import { calendarGrid, shiftCalendarMonth } from "@dtr/reports/domain/calendar";
 
-const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekdays = [["Sunday", "Sun"], ["Monday", "Mon"], ["Tuesday", "Tue"], ["Wednesday", "Wed"], ["Thursday", "Thu"], ["Friday", "Fri"], ["Saturday", "Sat"]] as const;
+type DotTone = "success" | "info" | "warning" | "danger";
+const legend: [DotTone, string][] = [["success", "Submitted"], ["info", "Draft or Ready"], ["warning", "Needs action"], ["danger", "Absent"]];
 const statusLabel = { draft: "Draft", ready: "Ready", submitted: "Submitted" } as const;
-const shortStatus = { draft: "D", ready: "R", submitted: "S" } as const;
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string; date?: string }> }) {
   const { month: requestedMonth, date: requestedDate } = await searchParams;
@@ -34,7 +35,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     <section className="panel calendar-panel" aria-labelledby="calendar-month"><h2 id="calendar-month" className="section-title mb-5">{label}</h2>
       <form className="calendar-month-picker" action="/calendar"><label htmlFor="calendar-month-input">Jump to month</label><input id="calendar-month-input" type="month" name="month" defaultValue={month} required /><button className="secondary-button" type="submit">Go</button></form>
       <div className="calendar-grid" role="grid" aria-label={`${label} report calendar`}>
-        {weekdays.map(day => <div className="calendar-weekday" role="columnheader" key={day}>{day}</div>)}
+        {weekdays.map(([full, short]) => <div className="calendar-weekday" role="columnheader" aria-label={full} key={full}><span className="calendar-weekday-long" aria-hidden="true">{short}</span><span className="calendar-weekday-short" aria-hidden="true">{short[0]}</span></div>)}
         {days.map(day => {
           const report = reportByDate.get(day.date);
           const entry = attendanceByDate.get(day.date);
@@ -45,19 +46,27 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           const hoursLabel = creditedMinutes != null ? formatMinutes(creditedMinutes)
             : state === "in_progress" ? "In progress" : state === "unfinished" ? "Unfinished" : null;
           const eligible = day.inMonth && day.date <= today && isWorkday(day.date);
+          // Phones show one dot per distinct state; the link's aria-label and day details carry the words.
+          const dots = [...new Set<DotTone>([
+            ...(absent ? ["danger" as const] : []),
+            ...(missingReport || state === "unfinished" || report?.needs_review ? ["warning" as const] : []),
+            ...(report && !report.needs_review ? [report.status === "submitted" ? "success" as const : "info" as const] : []),
+          ])];
           const contents = <><time dateTime={day.date} className="calendar-day-number">{day.day}</time>
+            {dots.length > 0 && <span className="calendar-dots" aria-hidden="true">{dots.map(tone => <span key={tone} className="calendar-dot" data-tone={tone} />)}</span>}
             {hoursLabel && <span className="calendar-hours" data-open={creditedMinutes == null || undefined} title={creditedMinutes != null ? `${hoursLabel} credited` : "Hours are credited after time out is saved"}>{hoursLabel}</span>}
             {(absent || report || missingReport) && <span className="calendar-badges">
-            {missingReport && <span className="status calendar-status" data-tone="warning" title="Missing report" aria-label="Missing report"><span className="calendar-status-full">Missing report</span><span className="calendar-status-short" aria-hidden="true">M</span></span>}
-            {absent && <span className="status calendar-status" data-tone="danger" title="Absent" aria-label="Absent"><span className="calendar-status-full">Absent</span><span className="calendar-status-short" aria-hidden="true">A</span></span>}
-            {report && <span className="status calendar-status" data-tone={report.needs_review ? "warning" : report.status === "submitted" ? "success" : undefined} aria-label={report.needs_review ? "Needs review" : statusLabel[report.status]}><span className="calendar-status-full">{report.needs_review ? "Needs review" : statusLabel[report.status]}</span><span className="calendar-status-short" aria-hidden="true">{report.needs_review ? "!" : shortStatus[report.status]}</span></span>}
+            {missingReport && <span className="status calendar-status" data-tone="warning">Missing report</span>}
+            {absent && <span className="status calendar-status" data-tone="danger">Absent</span>}
+            {report && <span className="status calendar-status" data-tone={report.needs_review ? "warning" : report.status === "submitted" ? "success" : undefined}>{report.needs_review ? "Needs review" : statusLabel[report.status]}</span>}
           </span>}</>;
           return <div role="gridcell" key={day.date} aria-current={day.date === today ? "date" : undefined} className="calendar-cell" data-selected={day.date === selectedDate || undefined} data-outside={!day.inMonth || undefined} data-future={day.inMonth && day.date > today || undefined}>
-            {eligible ? <Link href={`/calendar?month=${month}&date=${day.date}#day-details`} aria-label={`View ${day.date}${absent ? ", absent" : ""}${missingReport ? ", missing report" : ""}${hoursLabel ? `, ${hoursLabel}${creditedMinutes != null ? " credited" : ""}` : ""}`}>{contents}</Link> : <div>{contents}</div>}
+            {eligible ? <Link href={`/calendar?month=${month}&date=${day.date}#day-details`} aria-label={`View ${day.date}${absent ? ", absent" : ""}${missingReport ? ", missing report" : ""}${report ? `, report ${report.needs_review ? "needs review" : statusLabel[report.status].toLowerCase()}` : ""}${hoursLabel ? `, ${hoursLabel}${creditedMinutes != null ? " credited" : ""}` : ""}`}>{contents}</Link> : <div>{contents}</div>}
           </div>;
         })}
       </div>
-      <p className="muted-copy mt-5">Hours include regular credit and enabled overtime. Open entries earn no hours yet. Missing reports are completed, non-absent attendance days without a saved report. On small screens: A = Absent, M = Missing report, D = Draft, R = Ready, S = Submitted, ! = Needs review.</p>
+      <ul className="calendar-legend" aria-label="Calendar dot legend">{legend.map(([tone, text]) => <li key={tone}><span className="calendar-dot" data-tone={tone} aria-hidden="true" />{text}</li>)}</ul>
+      <p className="muted-copy mt-5">Hours include regular credit and enabled overtime. Open entries earn no hours yet. Missing reports are completed, non-absent attendance days without a saved report.<span className="calendar-legend-hint"> Tap a day to see its hours and report.</span></p>
       {!reports.length && !attendance.length && <p className="muted-copy mt-3">No saved attendance or reports this month. Choose a past or current weekday to get started.</p>}
     </section>
     {selectedDate && <section id="day-details" className="panel calendar-details mt-6" aria-labelledby="day-details-heading">
