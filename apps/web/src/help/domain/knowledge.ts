@@ -14,7 +14,7 @@ export type HelpTopic = keyof typeof helpRoutes;
 export type HelpArticle = { id: string; title: string; answer: string; topic: HelpTopic; source: string; matches: RegExp[] };
 export const starterQuestions = [
   "How do I record time out?", "How do I submit my DAR?",
-  "Why are my hours not credited?", "What does the attendance caught-up message mean?",
+  "How does Draft with AI work?", "Why are my hours not credited?",
 ] as const;
 
 export const articles: readonly HelpArticle[] = [

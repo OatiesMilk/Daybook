@@ -57,6 +57,22 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState("");
+  const [dragging, setDragging] = useState(false);
+
+  function chooseFile(file: File | undefined) {
+    setSelectedFile(file?.name ?? ""); setResult(null); setRows([]); setError("");
+  }
+
+  function dropFile(event: React.DragEvent<HTMLLabelElement>) {
+    event.preventDefault(); setDragging(false);
+    const file = event.dataTransfer.files[0];
+    if (!file || !fileInput.current) return;
+    if (!/\.(?:docx|pdf)$/i.test(file.name)) { setError("Choose a DOCX or PDF file."); return; }
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    fileInput.current.files = transfer.files;
+    chooseFile(file);
+  }
 
   useEffect(() => {
     const raw = sessionStorage.getItem(PENDING_IMPORT_KEY);
@@ -85,10 +101,7 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
 
   function clearImport() {
     if (fileInput.current) fileInput.current.value = "";
-    setSelectedFile("");
-    setResult(null);
-    setRows([]);
-    setError("");
+    chooseFile(undefined);
   }
 
   function usableRows(): ActivityRow[] | null {
@@ -122,11 +135,16 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
     <h2 id={`${inputId}-title`} className="section-title">Import from file</h2>
     <p className="muted-copy mt-2">Upload a DOCX or PDF to review extracted details. Nothing is saved automatically.</p>
     <form onSubmit={upload} className="mt-5 flex flex-wrap items-end gap-3">
-      <label className="w-full" htmlFor={inputId}>Daily Activity Report
-        <input ref={fileInput} id={inputId} name="report" type="file" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required
-          onChange={event => { setSelectedFile(event.target.files?.[0]?.name ?? ""); setResult(null); setRows([]); setError(""); }} />
+      <label className="file-drop w-full" htmlFor={inputId} data-dragging={dragging} data-selected={Boolean(selectedFile)}
+        onDragOver={event => { event.preventDefault(); setDragging(true); }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }} onDrop={dropFile}>
+        <input ref={fileInput} id={inputId} name="report" type="file" className="sr-only" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required
+          onChange={event => chooseFile(event.target.files?.[0])} />
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5" /></svg>
+        {selectedFile
+          ? <span className="max-w-full break-all text-sm font-semibold">{selectedFile}<span className="block font-normal text-muted">Tap or drop to change</span></span>
+          : <span className="text-sm font-semibold"><span className="drop-hint-touch">Choose a DOCX or PDF</span><span className="drop-hint-fine">Drop a DOCX or PDF here, or <span className="text-accent underline">browse</span></span><span className="block text-xs font-normal text-muted">Up to 4 MB</span></span>}
       </label>
-      <button className="secondary-button" disabled={uploading}>{uploading ? "Reading file…" : "Review import"}</button>
+      <button className="secondary-button" disabled={uploading || !selectedFile}>{uploading ? "Reading file…" : "Review import"}</button>
       {(selectedFile || result) && <button type="button" className="secondary-button danger-button" disabled={uploading} onClick={clearImport}>Remove file</button>}
     </form>
     {error && <p role="alert" className="notice mt-4" data-tone="danger">{error}</p>}

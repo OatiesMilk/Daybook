@@ -78,9 +78,13 @@ input::-webkit-datetime-edit { min-width: 0; padding: 0; }
 fieldset { min-width: 0; }
 .date-open-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; margin-bottom: 1.5rem; }
 .date-open-form > label { width: 14rem; max-width: 100%; }
+/* Title and date controls share one row on wide screens, pulling the editor up. */
+.page-heading-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; }
+.page-heading-row .date-open-form { margin-bottom: 0; }
 @media (max-width: 639px) {
   .date-open-form { display: grid; grid-template-columns: minmax(0, 1fr); }
   .date-open-form > label, .date-open-form > .secondary-button { width: 100%; }
+  .page-heading-row .date-open-form { width: 100%; }
 }
 textarea { resize: vertical; }
 input:hover, select:hover, textarea:hover { border-color: var(--muted); }
@@ -191,6 +195,32 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
     ::picker(select) { appearance: auto; }
   }
 }
+/* AI drafting disclosure: outlined (not grey-on-grey), opened about once a day, so a short reveal and instant close. */
+.ai-draft { border: 1px solid var(--line); border-radius: .7rem; background: var(--surface); }
+.ai-draft-summary { display: flex; min-height: 3.5rem; cursor: pointer; list-style: none; align-items: center; gap: .75rem; border-radius: .7rem; padding: .7rem .9rem; touch-action: manipulation; -webkit-user-select: none; user-select: none; transition: background-color .15s ease; }
+.ai-draft-summary::-webkit-details-marker { display: none; }
+.ai-draft-summary:active { background: var(--row-hover); }
+.ai-draft[open] > .ai-draft-summary { border-bottom-right-radius: 0; border-bottom-left-radius: 0; }
+.ai-draft-icon { display: grid; width: 2.25rem; height: 2.25rem; flex: none; place-items: center; border-radius: .55rem; background: var(--nav-bg); color: var(--nav-ink); }
+.ai-draft-chevron { flex: none; color: var(--muted); transition: transform .2s cubic-bezier(.23, 1, .32, 1); }
+.ai-draft[open] .ai-draft-chevron { transform: rotate(180deg); }
+.ai-draft-body { border-top: 1px solid var(--line); padding: 1rem .9rem .9rem; }
+.ai-draft[open] > .ai-draft-body { animation: ai-reveal .18s cubic-bezier(.23, 1, .32, 1); }
+@keyframes ai-reveal { from { opacity: 0; transform: translateY(4px); } }
+@keyframes ai-fade { from { opacity: 0; } }
+.ai-draft-details > summary { width: fit-content; min-height: 1.5rem; cursor: pointer; font-weight: 600; text-decoration: underline; touch-action: manipulation; }
+@media (hover: hover) and (pointer: fine) { .ai-draft-summary:hover { background: var(--row-hover); } }
+/* File import drop zone: tap to browse on touch; drag and drop where a mouse exists. */
+.file-drop { display: flex; min-height: 5.5rem; cursor: pointer; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; border: 1.5px dashed var(--line-strong); border-radius: .7rem; background: var(--surface); padding: 1rem; text-align: center; font-weight: 400; touch-action: manipulation; -webkit-user-select: none; user-select: none; transition: border-color .15s ease, background-color .15s ease; }
+.file-drop:active, .file-drop[data-dragging="true"] { border-color: var(--accent); background: var(--row-hover); }
+.file-drop:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.file-drop[data-selected="true"] { border-style: solid; }
+.drop-hint-fine { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .file-drop:hover { border-color: var(--muted); background: var(--row-hover); }
+  .drop-hint-fine { display: inline; }
+  .drop-hint-touch { display: none; }
+}
 /* AI drafting: fast ease-out entry for drafted rows, press feedback, and a constant-speed spinner. */
 .ai-draft-submit { transition: transform .16s cubic-bezier(.23, 1, .32, 1), background-color .16s ease, border-color .16s ease; }
 .ai-draft-submit:active:not(:disabled) { transform: scale(.97); }
@@ -204,6 +234,7 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
   .ai-draft-row { transition: opacity .18s ease !important; }
   @starting-style { .ai-draft-row { transform: none; } }
   .ai-draft-submit:active:not(:disabled) { transform: none; }
+  .ai-draft[open] > .ai-draft-body { animation: ai-fade .18s ease !important; }
 }
 @media (max-width: 700px) {
   .app-main { padding-top: calc(1rem + env(safe-area-inset-top, 0px)); padding-right: max(1rem, env(safe-area-inset-right, 0px)); padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); padding-left: max(1rem, env(safe-area-inset-left, 0px)); }
