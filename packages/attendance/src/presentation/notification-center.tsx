@@ -55,7 +55,7 @@ export function NotificationCenter({ load }: { load: () => Promise<ReminderData>
   }
   function close() { dialog.current?.close(); }
   function show() {
-    position(); dialog.current?.showModal(); setOpen(true); setLoading(true);
+    setOpen(true); setLoading(true);
     void refresh();
   }
   function save(next: typeof preferences) {
@@ -77,6 +77,8 @@ export function NotificationCenter({ load }: { load: () => Promise<ReminderData>
   }, [refresh, pathname]);
   useEffect(() => {
     if (!open) return;
+    // The panel contents mount with open, before native dialog focus is assigned.
+    position(); dialog.current?.showModal();
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("resize", position);
@@ -88,11 +90,13 @@ export function NotificationCenter({ load }: { load: () => Promise<ReminderData>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
       {data && active.length > 0 && <span className="notification-count" aria-hidden="true">{active.length > 99 ? "99+" : active.length}</span>}
     </button>
-    <dialog ref={dialog} id={id} className="notification-popup" aria-labelledby={`${id}-heading`} onClose={() => { setOpen(false); trigger.current?.focus(); }} onClick={event => {
+    <dialog ref={dialog} id={id} className="notification-popup" aria-labelledby={open ? `${id}-heading` : undefined} onClose={() => { setOpen(false); trigger.current?.focus(); }} onClick={event => {
       if (event.target !== event.currentTarget) return;
       const rect = event.currentTarget.getBoundingClientRect();
       if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
     }}>
+      {/* Closed panels have identical, empty contents on the server and during hydration. */}
+      {open && <>
       <div className="notification-popup-header"><h2 id={`${id}-heading`} className="section-title">Reminders{data ? ` (${active.length})` : ""}</h2><button type="button" className="secondary-button" onClick={close}>Close</button></div>
       <div className="notification-popup-body">
       <p className="muted-copy" role="status">{loading && !data ? "Loading reminders…" : loadError || (active.length ? "Choose a reminder to finish the entry." : "No active reminders in the last 30 days.")}</p>
@@ -108,6 +112,7 @@ export function NotificationCenter({ load }: { load: () => Promise<ReminderData>
       <p className="muted-copy mt-4">Preferences and dismissals apply to your account in this browser only. Dismissing a reminder does not change attendance or reports.</p>
       {error && <p role="alert" className="notice mt-4" data-tone="danger">{error}</p>}
     </details>
-    </div></dialog>
+    </div></>}
+    </dialog>
   </>;
 }

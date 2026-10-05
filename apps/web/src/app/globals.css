@@ -263,7 +263,13 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
 @media (max-width: 700px) {
   .app-main { padding-top: calc(1rem + env(safe-area-inset-top, 0px)); padding-right: max(1rem, env(safe-area-inset-right, 0px)); padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); padding-left: max(1rem, env(safe-area-inset-left, 0px)); }
   .workspace-header { align-items: center; flex-direction: row; }
-  .workspace-identity { width: 100%; justify-content: space-between; }
+  /* Keep actions beside the brand; the clock gets its own secondary row. */
+  .workspace-identity { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; }
+  .workspace-identity > a { grid-column: 1; grid-row: 1; justify-self: start; }
+  .workspace-identity > .workspace-header-tools { grid-column: 2; grid-row: 1; gap: .25rem; }
+  .workspace-identity > .current-date-time { grid-column: 1 / -1; grid-row: 2; min-width: 0; border-left: 0; padding-left: 0; gap: .5rem; }
+  .workspace-identity > .current-date-time time { flex-direction: row; align-items: baseline; gap: .5rem; }
+  .workspace-identity > .current-date-time .current-date { margin-top: 0; }
   .workspace-nav { display: none; }
   .mobile-bottom-nav { position: fixed; z-index: 40; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .1rem; border-top: 1px solid var(--line-strong); background: var(--surface); padding-top: .35rem; padding-right: max(.2rem, env(safe-area-inset-right, 0px)); padding-bottom: calc(.35rem + env(safe-area-inset-bottom, 0px)); padding-left: max(.2rem, env(safe-area-inset-left, 0px)); box-shadow: 0 -10px 24px -22px #16232aaa; }
   .mobile-bottom-nav a { display: flex; min-width: 0; min-height: 3.5rem; touch-action: manipulation; align-items: center; justify-content: center; flex-direction: column; gap: .2rem; border-radius: .55rem; color: var(--muted); font-size: .68rem; font-weight: 600; line-height: 1; text-decoration: none; transition: transform .12s cubic-bezier(.23, 1, .32, 1), background-color .12s ease, color .12s ease; -webkit-user-select: none; user-select: none; }
@@ -373,13 +379,6 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
   .help-launcher { padding: .4rem; }
   .help-popup { top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: min(40rem, 90dvh); border-radius: 1rem 1rem 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
   .help-log, .help-composer { padding-left: max(1rem, env(safe-area-inset-left, 0px)); padding-right: max(1rem, env(safe-area-inset-right, 0px)); }
-}
-@media (max-width: 400px) {
-  .workspace-identity { gap: .5rem; flex-wrap: wrap; }
-  .workspace-header-tools { margin-left: auto; }
-  .workspace-header-tools { gap: .25rem; }
-  .workspace-header-tools .current-date-time { min-width: 0; padding-left: .5rem; }
-  .workspace-header-tools .current-date-time svg { display: none; }
 }
 @media (hover: hover) and (pointer: fine) {
   .notification-bell:hover { background: var(--row-hover); color: var(--ink); }

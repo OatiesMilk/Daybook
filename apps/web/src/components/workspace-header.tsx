@@ -24,7 +24,12 @@ function AccountSlot({ className }: { className: string }) {
 export function WorkspaceHeader() {
   return <>
     <header className="workspace-header">
-      <div className="workspace-identity"><Brand /><div className="workspace-header-tools"><CurrentDateTime /><NotificationCenter load={loadReminders} /><HelpChat /><AccountSlot className="account-slot-mobile" /></div></div><nav aria-label="Main navigation" className="workspace-nav">
+      <div className="workspace-identity">
+        <Brand />
+        <CurrentDateTime />
+        <div className="workspace-header-tools"><NotificationCenter load={loadReminders} /><HelpChat /><AccountSlot className="account-slot-mobile" /></div>
+      </div>
+      <nav aria-label="Main navigation" className="workspace-nav">
         <WorkspaceNav />
       </nav>
       <AccountSlot className="account-slot-desktop" />
