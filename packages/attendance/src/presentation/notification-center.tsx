@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExtern
 import { usePathname } from "next/navigation";
 import type { Reminder } from "../domain/reminders";
 import { activeReminders, defaultReminderPreferences, parseReminderPreferences } from "../domain/reminder-preferences";
+import { PopupHeader, PopupIcon } from "@dtr/shared/ui/popup-chrome";
 
 const defaults = defaultReminderPreferences;
 const fallback = JSON.stringify(defaults);
@@ -43,7 +44,7 @@ export function NotificationCenter({ load }: { load: () => Promise<ReminderData>
       setData(result); setLoadError("");
     }, () => {
       if (current !== request.current) return;
-      setData(null); setLoadError("Could not load reminders. Retry, or sign in again if your session ended.");
+      setLoadError("Could not load reminders. Retry, or sign in again if your session ended.");
     }).finally(() => { if (current === request.current) setLoading(false); });
   }, [load]);
   function position() {
@@ -97,22 +98,30 @@ export function NotificationCenter({ load }: { load: () => Promise<ReminderData>
     }}>
       {/* Closed panels have identical, empty contents on the server and during hydration. */}
       {open && <>
-      <div className="notification-popup-header"><h2 id={`${id}-heading`} className="section-title">Reminders{data ? ` (${active.length})` : ""}</h2><button type="button" className="secondary-button" onClick={close}>Close</button></div>
+      <PopupHeader id={id} title="Reminders" description="A little help keeping your day complete." icon="bell" onClose={close} action={
+        <button type="button" className="popup-close popup-refresh" disabled={loading} aria-label={loading ? "Refreshing reminders" : "Refresh reminders"} title={loading ? "Refreshing reminders" : "Refresh reminders"} onClick={() => { setLoading(true); void refresh(); }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 11-1l3 6M4 12l3 6a7 7 0 0 0 11-1" /></svg>
+        </button>
+      } />
       <div className="notification-popup-body">
-      <p className="muted-copy" role="status">{loading && !data ? "Loading reminders…" : loadError || (active.length ? "Choose a reminder to finish the entry." : "No active reminders in the last 30 days.")}</p>
-      <button type="button" className="secondary-button mt-3" disabled={loading} onClick={() => { setLoading(true); void refresh(); }}>{loading ? "Refreshing…" : "Refresh"}</button>
-      <ul className="notification-list mt-5">{active.map(item => <li key={item.id} className="notification-item">
-        <div><p className="text-sm text-muted"><time dateTime={item.date}>{item.date}</time></p><h3 className="mt-1 font-semibold">{item.title}</h3><p className="muted-copy mt-2">{item.description}</p></div>
-        <div className="flex flex-wrap gap-2"><Link className="primary-button" href={item.href} onClick={close}>{item.kind === "time_out" ? "Add time out" : "Open report"}</Link><button type="button" className="secondary-button" aria-label={`Dismiss ${item.title.toLowerCase()} for ${item.date}`} onClick={() => save({ ...preferences, dismissed: [...preferences.dismissed, item.id] })}>Dismiss</button></div>
+      {loading && !data && !loadError && <div className="popup-loading" role="status"><p className="popup-eyebrow">Loading reminders…</p>{[0, 1].map(index => <div className="reminder-skeleton" key={index} aria-hidden="true"><span /><span /><span /></div>)}</div>}
+      {loadError && <div className="popup-feedback" role="alert"><p className="font-semibold">Your reminders couldn’t be loaded</p><p>{loadError}{data ? " The last loaded reminders are shown below." : " Your records are unchanged."}</p><button type="button" className="secondary-button" disabled={loading} onClick={() => { setLoading(true); void refresh(); }}>{loading ? "Retrying…" : "Try again"}</button></div>}
+      {data && !active.length && <div className="popup-empty" role="status"><span className="popup-emblem"><PopupIcon name="check" /></span><h3>All clear for now</h3><p>No active reminders in the last 30 days. You can check your attendance whenever you’re ready.</p><Link className="secondary-button" href="/attendance" onClick={close}>View attendance</Link></div>}
+      {!!active.length && <p className="popup-eyebrow reminder-list-label">{active.length} {active.length === 1 ? "item needs" : "items need"} your attention</p>}
+      <ul className="notification-list">{active.map(item => <li key={item.id} className="notification-item">
+        <span className="reminder-item-icon"><PopupIcon name={item.kind === "time_out" ? "bell" : "import"} /></span>
+        <div className="reminder-item-content"><p className="reminder-date"><time dateTime={item.date}>{item.date}</time><span>{item.kind === "time_out" ? "Attendance" : "Daily report"}</span></p><h3>{item.title}</h3><p className="reminder-description">{item.description}</p>
+        <div className="reminder-actions"><Link className="reminder-link" href={item.href} onClick={close}>{item.kind === "time_out" ? "Add time out" : "Open report"}<PopupIcon name="arrow" /></Link><button type="button" className="popup-text-button" aria-label={`Dismiss ${item.title.toLowerCase()} for ${item.date}`} onClick={() => save({ ...preferences, dismissed: [...preferences.dismissed, item.id] })}>Dismiss</button></div></div>
       </li>)}</ul>
-      {dismissed.length > 0 && <button className="secondary-button mt-5" type="button" onClick={() => save({ ...preferences, dismissed: [] })}>Restore {dismissed.length} dismissed reminder{dismissed.length === 1 ? "" : "s"}</button>}
-      <Link className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline" href="/history?state=open" onClick={close}>Check older unfinished attendance</Link>
+      {dismissed.length > 0 && <button className="popup-text-button reminder-restore" type="button" onClick={() => save({ ...preferences, dismissed: [] })}>Restore {dismissed.length} dismissed reminder{dismissed.length === 1 ? "" : "s"}</button>}
     <details className="notification-preferences mt-4"><summary>Reminder preferences</summary>
       <fieldset disabled={!data} className="mt-4 grid gap-3"><legend className="sr-only">Reminder types</legend><label className="checkbox-option"><input type="checkbox" checked={preferences.time_out} onChange={event => save({ ...preferences, time_out: event.target.checked })} />Time out</label><label className="checkbox-option"><input type="checkbox" checked={preferences.report} onChange={event => save({ ...preferences, report: event.target.checked })} />DAR preparation and submission</label></fieldset>
       <p className="muted-copy mt-4">Preferences and dismissals apply to your account in this browser only. Dismissing a reminder does not change attendance or reports.</p>
       {error && <p role="alert" className="notice mt-4" data-tone="danger">{error}</p>}
     </details>
-    </div></>}
+    </div>
+    <div className="popup-footer"><Link className="reminder-link" href="/history?state=open" onClick={close}>Older unfinished attendance<PopupIcon name="arrow" /></Link></div>
+    </>}
     </dialog>
   </>;
 }

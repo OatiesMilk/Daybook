@@ -98,6 +98,18 @@ Controls use a 0.55rem radius, panels 0.85rem, and status labels are pills. A 1p
 
 Primary and secondary buttons share a 2.85rem minimum height. Inputs, selects, and textareas use the same border, radius, and minimum height. Navigation exposes the active route with `aria-current`. Notices and status labels share success, warning, and danger colors. Focus uses a visible orange outline; reduced-motion preference shortens animation and transitions.
 
+### Popups and confirmations
+
+- Students use these panels to finish a day, find feature guidance, or review an editor change. Keep the saved record distinct from unsaved editor changes.
+- Use `PopupHeader` for a titled panel with a small indigo emblem, explanatory subtitle, and a 44px close control. Refresh is a secondary icon action with an accessible label.
+- Popup tokens (`--popup-space-*`, `--popup-text-*`, `--popup-radius`, `--popup-shadow`, `--popup-duration`, `--popup-ease`) live in `globals.css`. Spacing follows a 4px rhythm; type is 12/14/18/24px; panel corners remain 0.85rem. Light surfaces have two quiet shadow layers; dark surfaces use borders.
+- Reminders use readable dated records and quiet inline actions. Show a matching skeleton while loading, an actionable empty state, and retry on failure. Retain the last loaded list with a warning when refreshing fails.
+- Help uses a paper conversation area, indigo question bubbles, surface answer cards, and a separate composer. Starter questions are secondary; Send is the primary action. Keep scope and data-use information visible.
+- Confirmation dialogs name the activity or replacement and explain the consequence. Show an activity excerpt or import count. Focus the cancel action first; distinguish danger and replacement actions with words and semantic colors. Cancellation never alters editor rows.
+- Panels become safe-area-aware bottom sheets at 700px. Confirmations stay centered and fit within the viewport. Each panel scrolls internally; actions stay reachable.
+- Use native dialogs for focus containment and Escape dismissal; restore trigger focus after closing. Mount transient reminders controls only when open to retain stable hydration.
+- Occasional popup entrances use 180ms opacity/transform transitions with `--popup-ease`. Reduced motion removes entrance movement and press scaling. No bounce, animated dimensions, or decorative loading motion.
+
 ## Do's and Don'ts
 
 - Do show the date and state beside every attendance or report record.

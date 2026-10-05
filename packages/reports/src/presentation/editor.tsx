@@ -9,6 +9,7 @@ import { formatMinutes } from "@dtr/attendance/domain/index";
 import { ReportImport } from "@dtr/reports/presentation/import";
 import { AiDraft } from "@dtr/reports/presentation/ai-draft";
 import { ReportSidebar } from "@dtr/reports/presentation/sidebar";
+import { useConfirmDialog } from "@dtr/shared/ui/confirm-dialog";
 
 function Command({ report, command, label, primary = false, danger = false }: { report: Report; command: string; label: string; primary?: boolean; danger?: boolean }) {
   const [state, action, pending] = useActionState(reportAction, { error: "" });
@@ -30,7 +31,11 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
   const newId = useCallback(() => `row-${nextId.current++}`, []);
   const [ids, setIds] = useState<string[]>(() => rows.map((_, index) => `initial-${index}`));
   const [aiIds, setAiIds] = useState<ReadonlySet<string>>(new Set());
+  const { confirm, confirmation } = useConfirmDialog();
+  const latestIds = useRef(ids);
+  useEffect(() => { latestIds.current = ids; }, [ids]);
   const focusId = useRef<string | null>(null);
+  const addActivity = useRef<HTMLButtonElement>(null);
   const [state, action, pending] = useActionState(reportAction, { error: "" });
   const editable = (!report || report.status === "draft") && isLatest;
   const unsaved = report ? JSON.stringify(rows) !== JSON.stringify(report.rows) : true;
@@ -67,6 +72,17 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
   }
   function update(index: number, key: keyof ActivityRow, value: string) { setRows(current => current.map((row, i) => i === index ? { ...row, [key]: value } : row)); clearAiMark(index); }
   function remove(index: number) { setRows(current => current.filter((_, i) => i !== index)); setIds(current => current.filter((_, i) => i !== index)); }
+  async function confirmRemoval(rowId: string, index: number, row: ActivityRow) {
+    const approved = await confirm({ title: `Remove activity ${index + 1}?`, description: "This activity will be removed from the editor. Your saved report will change only when you save the draft.", detail: row.task || row.project || "This activity is empty.", confirmLabel: "Remove activity", tone: "danger" });
+    const currentIndex = latestIds.current.indexOf(rowId);
+    if (!approved || currentIndex < 0) return;
+    remove(currentIndex);
+    requestAnimationFrame(() => {
+      const next = latestIds.current[Math.min(currentIndex, latestIds.current.length - 1)];
+      if (next) document.getElementById(`${next}-title`)?.focus();
+      else addActivity.current?.focus();
+    });
+  }
   return <><div className="min-w-0"><section className="space-y-6">
     <div className="panel"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="section-title"><time dateTime={date}>{formatReportDate(date)}</time></h2><span className="status" data-tone={report?.needs_review ? "warning" : report?.status === "submitted" ? "success" : undefined}>{report ? `${report.status === "draft" ? "Draft" : report.status === "ready" ? "Ready" : "Submitted"} · version ${report.revision}` : "New draft"}</span></div>
       {report?.needs_review && <p role="alert" className="notice mt-4" data-tone="warning">Attendance changed after this report was saved. Its hours may be outdated. {isLatest ? "Create an updated version below; this version stays saved." : <><Link className="font-semibold underline" href={`/reports?date=${date}`}>Open the latest version</Link> to continue. This older version stays saved.</>}</p>}
@@ -75,13 +91,13 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
       {editable ? <form action={action} className="mt-6 space-y-5">
         <input type="hidden" name="date" value={date} /><input type="hidden" name="id" value={report?.id ?? ""} /><input type="hidden" name="version" value={report?.updated_at ?? ""} /><input type="hidden" name="command" value="save" /><input type="hidden" name="rows" value={JSON.stringify(rows)} />
         <fieldset disabled={pending} className="space-y-5">{rows.map((row, index) => { const rowId = ids[index] ?? `fallback-${index}`; const drafted = aiIds.has(rowId); return <div key={rowId} className={`border-t border-line pt-5 first:border-t-0 first:pt-0${drafted ? " ai-draft-row" : ""}`}>
-          <div className="mb-3 flex items-center justify-between gap-3"><h3 id={`${rowId}-title`} tabIndex={-1} className="flex items-center gap-2 font-bold">Activity {index + 1}{drafted && <span className="status" data-tone="info">AI draft</span>}</h3><button type="button" className="inline-flex min-h-11 items-center text-sm font-semibold text-danger-ink underline" onClick={() => { if (window.confirm("Remove this activity row?")) remove(index); }}>Remove</button></div>
+          <div className="mb-3 flex items-center justify-between gap-3"><h3 id={`${rowId}-title`} tabIndex={-1} className="flex items-center gap-2 font-bold">Activity {index + 1}{drafted && <span className="status" data-tone="info">AI draft</span>}</h3><button type="button" className="inline-flex min-h-11 items-center text-sm font-semibold text-danger-ink underline" onClick={() => { void confirmRemoval(rowId, index, row); }}>Remove</button></div>
           <div className="grid gap-4 sm:grid-cols-2"><label>Project<input maxLength={200} value={row.project} onChange={e => update(index, "project", e.target.value)} /></label><label>Status<select value={row.status} onChange={e => update(index, "status", e.target.value)}><option>Ongoing</option><option>Completed</option></select></label></div>
           <label className="mt-4">Task description<textarea rows={4} maxLength={4000} value={row.task} onChange={e => update(index, "task", e.target.value)} /></label>
           <label className="mt-4">Remarks / blockers<textarea rows={3} maxLength={4000} value={row.remarks} onChange={e => update(index, "remarks", e.target.value)} /></label>
         </div>; })}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-wrap gap-3"><button type="button" className="secondary-button" disabled={rows.length >= 100} onClick={() => { setRows(current => [...current, { ...empty, project: current.at(-1)?.project ?? "" }]); setIds(current => [...current, newId()]); }}>Add activity</button><button className="primary-button">{pending ? "Saving…" : "Save draft"}</button></div>
+          <div className="flex flex-wrap gap-3"><button ref={addActivity} type="button" className="secondary-button" disabled={rows.length >= 100} onClick={() => { setRows(current => [...current, { ...empty, project: current.at(-1)?.project ?? "" }]); setIds(current => [...current, newId()]); }}>Add activity</button><button className="primary-button">{pending ? "Saving…" : "Save draft"}</button></div>
           {report?.status === "draft" && !unsaved && <div className="flex w-full flex-wrap items-center gap-3 border-t border-line pt-3 sm:ml-auto sm:w-auto sm:justify-end sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4"><span className="w-full text-xs font-semibold text-muted sm:w-auto">Download saved draft</span><a className="secondary-button" href={`/api/reports/${report.id}/export?format=docx`}>DOCX</a><a className="secondary-button" href={`/api/reports/${report.id}/export?format=pdf`}>PDF</a></div>}
         </div>
         </fieldset>{state.error && <p role="alert" className="notice" data-tone="danger">{state.error}</p>}
@@ -101,5 +117,5 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
   <ReportSidebar>
     {sidebar}
     {editable && <ReportImport currentDate={date} editable={editable} currentRows={rows} applyRows={applyImportedRows} />}
-  </ReportSidebar></>;
+  </ReportSidebar>{confirmation}</>;
 }

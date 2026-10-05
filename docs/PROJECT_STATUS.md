@@ -1,7 +1,7 @@
 # Project Status
 
 **Project:** Daybook - multi-tenant internship attendance and Daily Activity Reports
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-05
 **Current phase:** Open-signup and calendar implementation complete locally; hosted migration/configuration and live acceptance pending
 **Current signup rollout:** Google registration; email registration disabled by default until SMTP is available. Existing password sign-in remains available.
 **Deployment:** Vercel production in Seoul (`icn1`), colocated with Supabase Seoul (`ap-northeast-2`)
@@ -28,6 +28,13 @@
   never sent. Emails, phone numbers, and credentials are blocked before sending. Approved 2026-09-30.
 
 ## Implemented
+
+### Popup design refinement
+
+- Shared popup header and tokens align reminders, Help, account menus, and navigation menus with the existing Daybook palette and typography.
+- Reminders include skeleton, empty, error/retry, and stale-list states; Help has clearer starter actions, conversation surfaces, and a separate composer.
+- Activity removal and import replacement use styled native confirmation dialogs with safe initial focus, explicit consequences, and cancellation. Row identity and change checks guard against background drafting updates while a decision is open.
+- Popup contents preserve the reminders hydration fix. Browser QA covers light/dark layouts at 320/375/768/1280px, focus, Escape, confirmation, refresh, retry, and reduced motion. Phone hardware verification remains manual.
 
 ### Foundation and architecture
 

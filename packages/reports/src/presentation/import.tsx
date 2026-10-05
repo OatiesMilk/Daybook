@@ -7,6 +7,7 @@ import { fillBlankProjects } from "@dtr/reports/domain/import-types";
 import { validateRows, type ActivityRow } from "@dtr/reports/domain/rules";
 import type { ImportedActivityRow, ReportImportResult } from "@dtr/reports/domain/import-types";
 import { formatMinutes } from "@dtr/attendance/domain/index";
+import { useConfirmDialog } from "@dtr/shared/ui/confirm-dialog";
 
 const PENDING_IMPORT_KEY = "daybook.pending-report-import";
 const PENDING_IMPORT_TTL = 10 * 60 * 1000;
@@ -58,6 +59,9 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState("");
   const [dragging, setDragging] = useState(false);
+  const { confirm, confirmation } = useConfirmDialog();
+  const latestRows = useRef(currentRows);
+  useEffect(() => { latestRows.current = currentRows; }, [currentRows]);
 
   function chooseFile(file: File | undefined) {
     setSelectedFile(file?.name ?? ""); setResult(null); setRows([]); setError("");
@@ -75,17 +79,26 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
   }
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(PENDING_IMPORT_KEY);
-    if (!raw) return;
-    sessionStorage.removeItem(PENDING_IMPORT_KEY);
-    try {
-      const pending = JSON.parse(raw) as { date: string; rows: ActivityRow[]; createdAt: number };
-      if (pending.date !== currentDate || Date.now() - pending.createdAt > PENDING_IMPORT_TTL || !editable) return;
-      const pendingRows = validateRows(pending.rows);
-      if (meaningful(currentRows) && !window.confirm("Replace the activity rows currently in this draft with the imported rows? Unsaved editor changes will be lost.")) return;
-      applyRows(pendingRows);
-    } catch { queueMicrotask(() => setError("The pending import could not be applied. Upload the report again.")); }
-  }, [applyRows, currentDate, currentRows, editable]);
+    let cancelled = false;
+    // Consume the import after mount, so Strict Mode's effect replay cannot lose it.
+    queueMicrotask(async () => {
+      if (cancelled) return;
+      try {
+        const raw = sessionStorage.getItem(PENDING_IMPORT_KEY);
+        if (!raw) return;
+        sessionStorage.removeItem(PENDING_IMPORT_KEY);
+        const pending = JSON.parse(raw) as { date: string; rows: ActivityRow[]; createdAt: number };
+        if (pending.date !== currentDate || Date.now() - pending.createdAt > PENDING_IMPORT_TTL || !editable) return;
+        const pendingRows = validateRows(pending.rows);
+        const original = JSON.stringify(latestRows.current);
+        if (meaningful(latestRows.current) && !await confirm({ title: "Replace your activity rows?", description: "The imported activities will replace the rows in this draft. Unsaved editor changes will be lost.", detail: `${pendingRows.length} imported ${pendingRows.length === 1 ? "activity" : "activities"} for ${currentDate}. Nothing is saved until you save the draft.`, confirmLabel: "Replace rows" })) return;
+        if (cancelled) return;
+        if (JSON.stringify(latestRows.current) !== original) { setError("Your activities changed while you reviewed the import. Review the file again before replacing them."); return; }
+        applyRows(pendingRows);
+      } catch { if (!cancelled) setError("The pending import could not be applied. Upload the report again."); }
+    });
+    return () => { cancelled = true; };
+  }, [applyRows, confirm, currentDate, editable]);
 
   async function upload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setUploading(true); setError(""); setResult(null); setRows([]);
@@ -110,13 +123,15 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
     catch (cause) { setError(cause instanceof Error ? cause.message : "Review the imported activity fields."); return null; }
   }
 
-  function applyImportedRows() {
+  async function applyImportedRows() {
     if (!result) return;
     const candidate = usableRows(); if (!candidate) return;
     const targetDate = result.header.date && !result.dateError ? result.header.date : currentDate;
     if (targetDate === currentDate) {
       if (!editable) { setError("This report version cannot be edited. Create an updated version before importing rows."); return; }
-      if (meaningful(currentRows) && !window.confirm("Replace the activity rows currently in the editor with the imported rows? Unsaved editor changes will be lost.")) return;
+      const original = JSON.stringify(latestRows.current);
+      if (meaningful(currentRows) && !await confirm({ title: "Replace your activity rows?", description: "The imported activities will replace the rows in your editor. Unsaved editor changes will be lost.", detail: `${candidate.length} imported ${candidate.length === 1 ? "activity" : "activities"} for ${targetDate}. Nothing is saved until you save the draft.`, confirmLabel: "Replace rows" })) return;
+      if (JSON.stringify(latestRows.current) !== original) { setError("Your activities changed while you reviewed the import. Review the file again before replacing them."); return; }
       applyRows(candidate); setError("");
       return;
     }
@@ -131,7 +146,7 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
   const hoursMatch = result && result.header.statedMinutes !== null && result.attendanceMinutes !== null
     ? result.header.statedMinutes === result.attendanceMinutes : null;
 
-  return <section className="panel min-w-0" aria-labelledby={`${inputId}-title`}>
+  return <><section className="panel min-w-0" aria-labelledby={`${inputId}-title`}>
     <h2 id={`${inputId}-title`} className="section-title">Import from file</h2>
     <p className="muted-copy mt-2">Upload a DOCX or PDF to review extracted details. Nothing is saved automatically.</p>
     <form onSubmit={upload} className="mt-5 flex flex-wrap items-end gap-3">
@@ -183,5 +198,5 @@ export function ReportImport({ currentDate, editable, currentRows, applyRows }: 
         <p className="muted-copy">This only fills the editor. Review the activities, then use Save draft when you are ready.</p>
       </div>}
     </div>}
-  </section>;
+  </section>{confirmation}</>;
 }

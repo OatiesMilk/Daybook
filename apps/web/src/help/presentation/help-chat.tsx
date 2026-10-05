@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { isHelpReply, MAX_MESSAGE, type HelpReply } from "../domain/answer";
 import { starterQuestions } from "../domain/knowledge";
+import { PopupHeader, PopupIcon } from "@dtr/shared/ui/popup-chrome";
 
 type Turn = { question: string; reply?: HelpReply; error?: string };
 
@@ -81,20 +82,20 @@ export function HelpChat() {
       const rect = event.currentTarget.getBoundingClientRect();
       if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
     }}>
-      <div className="notification-popup-header"><div><h2 id={`${id}-heading`} className="section-title">Daybook Help</h2><p id={`${id}-scope`} className="muted-copy mt-1">Answers questions about Daybook only.</p></div><button type="button" className="secondary-button" onClick={close}>Close</button></div>
+      <PopupHeader id={id} title="Daybook Help" description="Find your next step, without leaving your day." icon="help" onClose={close} />
       <div ref={log} className="help-log" role="log" aria-label="Help conversation" aria-live="polite" aria-relevant="additions text">
-        {!turns.length && <div><h3 className="font-semibold">How can I help you use Daybook?</h3><p className="muted-copy mt-2">Ask naturally about Daybook features or what I can help with. I can identify your signed-in account, but can&apos;t read your records or change anything. To turn notes into activity rows, use Draft with AI in the report editor. AI answers can make mistakes.</p><div className="help-starters mt-4">{starterQuestions.map(item => <button type="button" className="secondary-button" key={item} onClick={() => { void ask(item); }}>{item}</button>)}</div></div>}
+        {!turns.length && <div className="help-welcome"><p className="popup-eyebrow">A guide to your workspace</p><h3>What would you like to do?</h3><p className="muted-copy">Get help with attendance, reports, and your profile. Choose a question or ask in your own words.</p><div className="help-starters">{starterQuestions.map(item => <button type="button" key={item} onClick={() => { void ask(item); }}><span>{item}</span><PopupIcon name="arrow" /></button>)}</div><p className="help-scope-note">Help explains features; it can’t read your records or make changes. For activity descriptions, use Draft with AI in Reports.</p></div>}
         {turns.map((turn, index) => <div className="help-turn" key={index}>
           <p className="help-question"><span className="sr-only">You: </span>{turn.question}</p>
-          {turn.reply && <div className="help-answer"><span className="sr-only">Daybook Help: </span><p className="whitespace-pre-wrap">{turn.reply.text}</p>{turn.reply.sources.length > 0 && <ul className="help-sources">{turn.reply.sources.map(source => <li key={source.id}><Link href={source.href} onClick={close}>{source.label}</Link></li>)}</ul>}</div>}
+          {turn.reply && <div className="help-answer"><p className="popup-eyebrow">Daybook Help</p><p className="whitespace-pre-wrap">{turn.reply.text}</p>{turn.reply.sources.length > 0 && <ul className="help-sources">{turn.reply.sources.map(source => <li key={source.id}><Link href={source.href} onClick={close}>{source.label}<PopupIcon name="arrow" /></Link></li>)}</ul>}</div>}
           {turn.error && <div className="notice" data-tone="danger"><p>{turn.error}</p><button type="button" className="secondary-button mt-2" disabled={loading} onClick={() => { void ask(turn.question, index === turns.length - 1); }}>Retry question</button></div>}
         </div>)}
-        {loading && <p className="muted-copy" role="status">Finding verified guidance…</p>}
+        {loading && <p className="help-pending" role="status"><span className="popup-pending-dot" />Finding verified guidance…</p>}
       </div>
       <form className="help-composer" onSubmit={event => { event.preventDefault(); void ask(question); }}>
         <label htmlFor={`${id}-question`}>Ask about a Daybook feature</label>
-        <div className="help-input-row"><input ref={input} id={`${id}-question`} value={question} maxLength={MAX_MESSAGE} autoComplete="off" enterKeyHint="send" onChange={event => setQuestion(event.target.value)} placeholder="How do I submit my DAR?" aria-describedby={`${id}-privacy`} /><button className="primary-button" disabled={loading || !question.trim()}>Send</button></div>
-        <div className="help-footer"><p id={`${id}-privacy`} className="muted-copy">Questions may be processed by Google Gemini. Don’t share sensitive information. Chat clears when you leave this page.</p><button type="button" className="secondary-button" onClick={clear} disabled={!turns.length && !question}>Clear chat</button></div>
+        <div className="help-input-row"><input ref={input} id={`${id}-question`} required value={question} maxLength={MAX_MESSAGE} autoComplete="off" enterKeyHint="send" onChange={event => setQuestion(event.target.value)} placeholder="How do I submit my DAR?" aria-describedby={`${id}-privacy`} /><button className="primary-button" disabled={loading}>{loading ? "Asking…" : "Send"}</button></div>
+        <div className="help-footer"><p id={`${id}-privacy`}>Google Gemini may process questions. Keep sensitive details out. Answers can be mistaken; chat clears when you leave this page.</p><button type="button" className="popup-text-button" onClick={clear} disabled={!turns.length && !question}>Clear chat</button></div>
       </form>
     </dialog>
   </>;
