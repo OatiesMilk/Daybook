@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { reportAction } from "@dtr/reports/application/actions";
 import { formatReportDate, type ActivityRow, type Report } from "@dtr/reports/domain/rules";
 import { mergeDraftRows } from "@dtr/reports/domain/ai-draft";
+import { collapsedFromPositions, collapsedRowsKey, positionsFromCollapsed } from "@dtr/reports/domain/collapsed-rows";
 import { formatMinutes } from "@dtr/attendance/domain/index";
 import { ReportImport } from "@dtr/reports/presentation/import";
 import { AiDraft } from "@dtr/reports/presentation/ai-draft";
@@ -22,6 +23,19 @@ function Command({ report, command, label, primary = false, danger = false }: { 
   </form>;
 }
 
+const subscribeNever = () => () => {};
+
+function readCollapsed(key: string, ids: string[]): Set<string> {
+  try { return collapsedFromPositions(JSON.parse(localStorage.getItem(key) ?? "[]"), ids); }
+  catch { return new Set(); }
+}
+
+function writeCollapsed(key: string, ids: string[], collapsed: ReadonlySet<string>) {
+  const positions = positionsFromCollapsed(ids, collapsed);
+  try { if (positions.length) localStorage.setItem(key, JSON.stringify(positions)); else localStorage.removeItem(key); }
+  catch { /* Storage unavailable (private mode, blocked): collapsing still works until reload. */ }
+}
+
 export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, sidebar }: { report: Report | null; date: string; isLatest: boolean; aiDraftEnabled?: boolean; sidebar?: ReactNode }) {
   const empty: ActivityRow = { project: "", task: "", status: "Ongoing", remarks: "" };
   const [rows, setRows] = useState<ActivityRow[]>(report?.rows.length ? report.rows : [{ ...empty }]);
@@ -31,6 +45,24 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
   const newId = useCallback(() => `row-${nextId.current++}`, []);
   const [ids, setIds] = useState<string[]>(() => rows.map((_, index) => `initial-${index}`));
   const [aiIds, setAiIds] = useState<ReadonlySet<string>>(new Set());
+  // Collapsed rows show a one-line summary, so long reports don't need endless scrolling.
+  // Keyed by row ID in memory, so collapsing survives edits, removals and new rows (which
+  // start open). It is remembered per report date on this device as row positions only.
+  // The editor remounts after every save, so the stored choice is read on the first client
+  // render (no flash); during hydration rows render open to match the server HTML.
+  const storageKey = collapsedRowsKey(date);
+  const isClient = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const [localCollapsed, setLocalCollapsed] = useState<ReadonlySet<string> | null>(null);
+  const storedCollapsed = useMemo(() => isClient ? readCollapsed(storageKey, ids) : new Set<string>(), [isClient, storageKey, ids]);
+  const collapsed = localCollapsed ?? storedCollapsed;
+  const latestCollapsed = useRef(collapsed);
+  useEffect(() => { latestCollapsed.current = collapsed; }, [collapsed]);
+  const changeCollapsed = (next: ReadonlySet<string>, rowIds = ids) => { setLocalCollapsed(next); writeCollapsed(storageKey, rowIds, next); };
+  const toggleRow = (rowId: string) => {
+    const next = new Set(collapsed);
+    if (!next.delete(rowId)) next.add(rowId);
+    changeCollapsed(next);
+  };
   const { confirm, confirmation } = useConfirmDialog();
   const latestIds = useRef(ids);
   useEffect(() => { latestIds.current = ids; }, [ids]);
@@ -42,11 +74,13 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
   const applyImportedRows = useCallback((imported: ActivityRow[]) => {
     const added = imported.map(() => newId());
     setRows(imported); setIds(added); setAiIds(new Set());
+    // Imported rows replace everything and start open; drop the old rows' saved positions.
+    setLocalCollapsed(new Set()); writeCollapsed(storageKey, added, new Set());
     // Import now lives in the sidebar (below the editor on phones), so move focus,
     // and with it the viewport, to the rows that were just filled.
     focusId.current = added[0] ?? null;
     return true;
-  }, [newId]);
+  }, [newId, storageKey]);
   // Drafting takes seconds and rows stay editable meanwhile, so merge from the latest rows,
   // not the ones captured when the request started.
   const latestRows = useRef(rows);
@@ -58,9 +92,11 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
     setRows(merged.rows);
     setIds(current => merged.firstNewIndex === 0 ? added : [...current, ...added]);
     setAiIds(current => new Set([...(merged.firstNewIndex === 0 ? [] : current), ...added]));
+    // Drafts that replace an untouched editor start open; appended drafts keep earlier positions.
+    if (merged.firstNewIndex === 0) { setLocalCollapsed(new Set()); writeCollapsed(storageKey, added, new Set()); }
     focusId.current = added[0];
     return null;
-  }, [newId]);
+  }, [newId, storageKey]);
   useEffect(() => {
     if (!focusId.current) return;
     document.getElementById(`${focusId.current}-title`)?.focus();
@@ -71,7 +107,13 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
     if (rowId && aiIds.has(rowId)) setAiIds(current => { const next = new Set(current); next.delete(rowId); return next; });
   }
   function update(index: number, key: keyof ActivityRow, value: string) { setRows(current => current.map((row, i) => i === index ? { ...row, [key]: value } : row)); clearAiMark(index); }
-  function remove(index: number) { setRows(current => current.filter((_, i) => i !== index)); setIds(current => current.filter((_, i) => i !== index)); }
+  function remove(index: number) {
+    const remaining = latestIds.current.filter((_, i) => i !== index);
+    setRows(current => current.filter((_, i) => i !== index)); setIds(remaining);
+    // Later rows shift up one position, so re-save the remembered positions.
+    const next = new Set(latestCollapsed.current); next.delete(latestIds.current[index]);
+    changeCollapsed(next, remaining);
+  }
   async function confirmRemoval(rowId: string, index: number, row: ActivityRow) {
     const approved = await confirm({ title: `Remove activity ${index + 1}?`, description: "This activity will be removed from the editor. Your saved report will change only when you save the draft.", detail: row.task || row.project || "This activity is empty.", confirmLabel: "Remove activity", tone: "danger" });
     const currentIndex = latestIds.current.indexOf(rowId);
@@ -90,11 +132,26 @@ export function ReportEditor({ report, date, isLatest, aiDraftEnabled = false, s
       {editable && aiDraftEnabled && <div className="mt-6"><AiDraft date={date} applyDraft={applyDraft} /></div>}
       {editable ? <form action={action} className="mt-6 space-y-5">
         <input type="hidden" name="date" value={date} /><input type="hidden" name="id" value={report?.id ?? ""} /><input type="hidden" name="version" value={report?.updated_at ?? ""} /><input type="hidden" name="command" value="save" /><input type="hidden" name="rows" value={JSON.stringify(rows)} />
-        <fieldset disabled={pending} className="space-y-5">{rows.map((row, index) => { const rowId = ids[index] ?? `fallback-${index}`; const drafted = aiIds.has(rowId); return <div key={rowId} className={`border-t border-line pt-5 first:border-t-0 first:pt-0${drafted ? " ai-draft-row" : ""}`}>
-          <div className="mb-3 flex items-center justify-between gap-3"><h3 id={`${rowId}-title`} tabIndex={-1} className="flex items-center gap-2 font-bold">Activity {index + 1}{drafted && <span className="status" data-tone="info">AI draft</span>}</h3><button type="button" className="inline-flex min-h-11 items-center text-sm font-semibold text-danger-ink underline" onClick={() => { void confirmRemoval(rowId, index, row); }}>Remove</button></div>
+        <fieldset disabled={pending} className="space-y-5">
+          {rows.length > 1 && <div className="flex justify-end"><button type="button" className="row-action" onClick={() => changeCollapsed(ids.every(id => collapsed.has(id)) ? new Set() : new Set(ids))}>{ids.every(id => collapsed.has(id)) ? "Expand all" : "Collapse all"}</button></div>}
+          {rows.map((row, index) => { const rowId = ids[index] ?? `fallback-${index}`; const drafted = aiIds.has(rowId); const open = !collapsed.has(rowId);
+          const summary = [row.project.trim(), row.status, row.task.trim().split("\n")[0]].filter(Boolean).join(" · ");
+          return <div key={rowId} className={`border-t border-line pt-5 first:border-t-0 first:pt-0${drafted ? " ai-draft-row" : ""}`}>
+          <div className={`${open ? "mb-3 " : ""}flex items-center justify-between gap-3`}>
+            <h3 id={`${rowId}-title`} tabIndex={-1} className="min-w-0 flex-1">
+              <button type="button" className="activity-toggle" aria-expanded={open} aria-controls={`${rowId}-body`} onClick={() => toggleRow(rowId)}>
+                <svg className="activity-chevron" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m6 8 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span className="flex-none font-bold">Activity {index + 1}</span>{drafted && <span className="status" data-tone="info">AI draft</span>}
+                {!open && <span className="activity-summary">{summary || "Empty activity"}</span>}
+              </button>
+            </h3>
+            <button type="button" className="inline-flex min-h-11 flex-none items-center text-sm font-semibold text-danger-ink underline" onClick={() => { void confirmRemoval(rowId, index, row); }}>Remove</button>
+          </div>
+          <div id={`${rowId}-body`} hidden={!open}>
           <div className="grid gap-4 sm:grid-cols-2"><label>Project<input maxLength={200} value={row.project} onChange={e => update(index, "project", e.target.value)} /></label><label>Status<select value={row.status} onChange={e => update(index, "status", e.target.value)}><option>Ongoing</option><option>Completed</option></select></label></div>
           <label className="mt-4">Task description<textarea rows={4} maxLength={4000} value={row.task} onChange={e => update(index, "task", e.target.value)} /></label>
           <label className="mt-4">Remarks / blockers<textarea rows={3} maxLength={4000} value={row.remarks} onChange={e => update(index, "remarks", e.target.value)} /></label>
+          </div>
         </div>; })}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-wrap gap-3"><button ref={addActivity} type="button" className="secondary-button" disabled={rows.length >= 100} onClick={() => { setRows(current => [...current, { ...empty, project: current.at(-1)?.project ?? "" }]); setIds(current => [...current, newId()]); }}>Add activity</button><button className="primary-button">{pending ? "Saving…" : "Save draft"}</button></div>
