@@ -6,9 +6,81 @@ import { PDFArray, PDFDocument, PDFRawStream, decodePDFRawStream, rgb, type PDFF
 import type { ReportSnapshot } from "../domain/rules.ts";
 
 // Coordinates match the supplied landscape-letter DAR v2 template, in PDF points.
-const edges = [73.584, 192.02, 349.61, 474.79, 731.4];
+// Only the table's outer edges are fixed; column widths are planned per report.
+const tableLeft = 73.584, tableRight = 731.4;
 const tableTop = 348.91, headerHeight = 42, bottom = 54;
 const fontSize = 10, lineHeight = 14, padding = 7;
+// A row is exactly as tall as its text: one line is 28pt, so short activities pack tightly.
+const minRowHeight = lineHeight + 2 * padding;
+const labels = ["Project", "Task Description", "Status\n(Completed/Ongoing)", "Remarks/Blockers"];
+const minColumnWidth = 80, widthStep = 4;
+
+type Token = { width: number; space: boolean };
+
+/** Pre-measured words and gaps per paragraph, so line counts can be estimated cheaply at any width. */
+function measure(value: string, font: PDFFont): Token[][] {
+  return value.replace(/\r\n?/g, "\n").replace(/\t/g, "    ").split("\n").map(paragraph =>
+    paragraph.split(/(\s+)/).filter(Boolean).map(part => ({ width: font.widthOfTextAtSize(part, fontSize), space: /^\s/.test(part) })));
+}
+
+/** Estimated wrapped line count, mirroring wrap(): gaps vanish at a break; over-long words split. */
+function lineCount(paragraphs: Token[][], width: number): number {
+  let total = 0;
+  for (const tokens of paragraphs) {
+    let lines = 1, used = 0;
+    for (const { width: w, space } of tokens) {
+      if (used + w <= width) { used += w; continue; }
+      if (used > 0) { lines++; used = 0; }
+      if (space) continue;
+      lines += Math.ceil(w / width) - 1;
+      used = w - (Math.ceil(w / width) - 1) * width;
+    }
+    total += lines;
+  }
+  return total;
+}
+
+/**
+ * Plans column edges for this report. Status is sized to fit its header and values,
+ * since it only ever holds "Completed" or "Ongoing". Every split of the remaining width
+ * between Project, Task Description and Remarks is tried in small steps, and the split
+ * with the shortest table wins. Among equally short tables, the one closest to sharing
+ * width by how much text each column holds is chosen, so the layout stays balanced.
+ * (Growing one column at a time misses the jump where a whole project name fits on one
+ * line, so the search is exhaustive; line counts per width are cached, keeping it cheap.)
+ */
+function planColumns(rows: ReportSnapshot["rows"], font: PDFFont): number[] {
+  const labelWidth = (label: string) => Math.max(...label.split("\n").map(line => font.widthOfTextAtSize(line, fontSize))) + 2 * padding;
+  const cells = rows.map(row => [row.project, row.task, row.status, row.remarks].map(value => measure(value, font)));
+  const statusWidth = Math.max(labelWidth(labels[2]), ...rows.map(row => font.widthOfTextAtSize(row.status, fontSize) + 2 * padding));
+  const [projectMin, taskMin, remarksMin] = [0, 1, 3].map(i => Math.max(minColumnWidth, labelWidth(labels[i])));
+  const available = tableRight - tableLeft - statusWidth;
+  const steps = (min: number, max: number) => Array.from({ length: Math.max(0, Math.floor((max - min) / widthStep)) + 1 }, (_, k) => min + k * widthStep);
+  const cache = new Map<string, number[]>();
+  const counts = (column: number, width: number) => {
+    const key = `${column}:${width}`;
+    let value = cache.get(key);
+    if (!value) cache.set(key, value = cells.map(row => lineCount(row[column], width - 2 * padding)));
+    return value;
+  };
+  const status = counts(2, statusWidth);
+  // Longest unwrapped line per column: how much width that column could use.
+  const demand = [0, 1, 3].map(i => Math.max(1, ...cells.map(row => Math.max(0, ...row[i].map(tokens => tokens.reduce((line, token) => line + token.width, 0))))));
+  const totalDemand = demand.reduce((sum, value) => sum + value, 0);
+  const target = demand.map(value => available * value / totalDemand);
+  let best = { height: Infinity, skew: Infinity, widths: [projectMin, available - projectMin - remarksMin, statusWidth, remarksMin] };
+  for (const project of steps(projectMin, available - taskMin - remarksMin)) {
+    for (const remarks of steps(remarksMin, available - project - taskMin)) {
+      const task = available - project - remarks;
+      const [p, t, r] = [counts(0, project), counts(1, task), counts(3, remarks)];
+      const height = p.reduce((sum, _, row) => sum + Math.max(p[row], t[row], status[row], r[row]), 0);
+      if (height > best.height) continue;
+      const skew = Math.abs(project - target[0]) + Math.abs(task - target[1]) + Math.abs(remarks - target[2]);
+      if (height < best.height || skew < best.skew) best = { height, skew, widths: [project, task, statusWidth, remarks] };
+    }
+  }
+  return best.widths.reduce<number[]>((edges, width) => [...edges, edges[edges.length - 1] + width], [tableLeft]);
+}
 
 /** Remove the original table's commands, leaving the watermark intact.
  * The boundary belongs to the supplied Word-exported template. Reject a
@@ -92,6 +164,7 @@ export async function renderReportPdf(snapshot: ReportSnapshot, templateBytes?: 
   const date = `${snapshot.date.slice(5, 7)}/${snapshot.date.slice(8, 10)}/${snapshot.date.slice(0, 4)}`;
   const hours = `${Math.floor(snapshot.totalMinutes / 60)} hours and ${snapshot.totalMinutes % 60} mins`;
   const navy = rgb(0.0902, 0.212, 0.361);
+  const edges = planColumns(snapshot.rows, font);
   function newPage() {
     const page = doc.addPage([792, 612]);
     page.drawPage(background);
@@ -100,7 +173,6 @@ export async function renderReportPdf(snapshot: ReportSnapshot, templateBytes?: 
     detail(page, font, hours, 160, 378.19, 230, true);
     detail(page, font, date, 434, 426.7, 285, true);
     detail(page, font, snapshot.profile.department, 504, 402.91, 216, true);
-    const labels = ["Project", "Task Description", "Status\n(Completed/Ongoing)", "Remarks/Blockers"];
     labels.forEach((label, i) => {
       const x = edges[i], width = edges[i + 1] - x;
       page.drawRectangle({ x, y: tableTop - headerHeight, width, height: headerHeight, color: navy,
@@ -122,14 +194,14 @@ export async function renderReportPdf(snapshot: ReportSnapshot, templateBytes?: 
     const fullPageLines = Math.floor((tableTop - headerHeight - bottom - 2 * padding) / lineHeight);
     const remainingLines = Math.floor((y - bottom - 2 * padding) / lineHeight);
     // Keep normal rows together; very tall rows continue across pages.
-    if (length <= fullPageLines && (length > remainingLines || y - Math.max(41, length * lineHeight + 2 * padding) < bottom)) {
+    if (length <= fullPageLines && length > remainingLines) {
       page = newPage(); y = tableTop - headerHeight;
     }
     while (offset < length) {
       const capacity = Math.floor((y - bottom - 2 * padding) / lineHeight);
-      if (capacity < 1 || y - bottom < 41) { page = newPage(); y = tableTop - headerHeight; continue; }
+      if (capacity < 1 || y - bottom < minRowHeight) { page = newPage(); y = tableTop - headerHeight; continue; }
       const count = Math.min(length - offset, capacity);
-      const height = Math.max(41, count * lineHeight + 2 * padding);
+      const height = count * lineHeight + 2 * padding;
       cells.forEach((lines, i) => {
         page.drawRectangle({ x: edges[i], y: y - height, width: edges[i + 1] - edges[i], height,
           borderColor: rgb(0, 0, 0), borderWidth: 0.8 });

@@ -11,8 +11,11 @@ table boundary are specific to this template. Replacing or re-exporting the
 PDF requires reviewing the adapter in `pdf-renderer.ts` and running export QA;
 an incompatible drawing structure is rejected rather than silently masked.
 
-Activity rows wrap and grow. Ordinary rows stay together; rows taller than a
-page continue on later pages. Every page repeats the background, report details
+Activity rows wrap and are exactly as tall as their text. Column widths are
+planned per report at a fixed 10pt font: Status fits its header and values, and
+Project, Task Description and Remarks share the remaining width so the table is
+as short as possible. The table keeps the template's outer edges. Ordinary rows
+stay together; rows taller than a page continue on later pages. Every page repeats the background, report details
 and table header. The embedded Noto Serif font and its SIL Open Font License
 are in `fonts/`. Unsupported characters cause an export error rather than
 invisible text; additional scripts require an appropriate bundled font.

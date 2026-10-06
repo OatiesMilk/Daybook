@@ -55,10 +55,16 @@ Concurrent export requests return the winning archived bytes.
 
 ## PDF generation
 
-PDF export renders a print-styled HTML view of the report snapshot through headless Chromium (`puppeteer-core`, using
-`@sparticuz/chromium`'s prebuilt binary on Vercel and the `puppeteer` dev dependency's bundled browser locally). No document
-leaves the app's own Vercel deployment or Supabase project — there is no external conversion endpoint. PDF creation, like
-DOCX creation, now works on Vercel and from any device, superseding the earlier local-only-LibreOffice constraint.
+PDF export draws on the supplied `dar-template.pdf` in Node.js with `pdf-lib` (`packages/reports/src/infrastructure/pdf-renderer.ts`):
+the template is embedded as artwork, and profile details plus the activity table are drawn over it with the bundled Noto Serif
+font. No document leaves the app's own Vercel deployment or Supabase project, and no browser or conversion service is used.
+
+The table keeps the template's outer edges but adapts to each report at a fixed 10pt font. Rows are exactly as tall as their
+wrapped text. Column widths are planned once per report: Status fits its header and values, and Project, Task Description,
+and Remarks share the rest. Every split is tried in 4pt steps (line counts per width are cached), and the split giving the
+shortest table wins, with ties going to the split closest to each column's share of text. Growing one column at a time was
+rejected because it never reaches the width where a whole project name fits on one line. Normal rows stay together; rows
+taller than a page continue on later pages, and every page repeats the details and header.
 The DOCX template retains the sample's layout and images; rendering checks covered one-page and four-page reports.
 
 ## External AI processing (scoped exceptions)

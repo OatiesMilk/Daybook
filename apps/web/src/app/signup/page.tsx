@@ -4,6 +4,7 @@ import { Brand } from "@dtr/shared/ui/brand";
 import { ThemeToggle } from "@dtr/shared/ui/theme-toggle";
 import { SignupForm } from "@dtr/identity/presentation/signup-form";
 import { googleLogin } from "@dtr/identity/application/actions";
+import { GoogleButton } from "@dtr/identity/presentation/google-button";
 import { supabaseConfig } from "@dtr/shared/infrastructure/supabase/config";
 
 export default function SignupPage() {
@@ -18,7 +19,7 @@ export default function SignupPage() {
       <p className="muted-copy mt-2 mb-7">Continue with Google to create your private workspace, then complete your profile and internship target.</p>
       {emailSignupEnabled && <><SignupForm turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
         <div className="my-5 flex items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div></>}
-      <form action={googleLogin}><button className="primary-button w-full">Continue with Google</button></form>
+      <form action={googleLogin}><GoogleButton primary /></form>
       <p className="mt-6 text-sm text-muted">Already have an account? <Link className="font-semibold text-accent underline" href="/login">Sign in</Link></p>
     </section>
   </main>;

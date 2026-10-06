@@ -592,3 +592,10 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--link); }
   .carry-fields { transition: opacity .18s ease !important; }
   @starting-style { .carry-fields { transform: none; } }
 }
+
+/* Continue with Google: the brand mark leads the label at a fixed size so it never squishes.
+   Its colours and white chip follow Google's branding rules, so they are intentionally not theme tokens. */
+.google-button { gap: .65rem; }
+.google-mark-chip { display: inline-flex; flex: none; align-items: center; justify-content: center; }
+.google-mark { display: block; flex: none; }
+.google-button[data-variant="primary"] .google-mark-chip { width: 1.6rem; height: 1.6rem; border-radius: .35rem; background: #ffffff; }

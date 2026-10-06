@@ -14,7 +14,6 @@
     "@dtr/identity": "*",
     "@dtr/shared": "*",
     "@pdf-lib/fontkit": "^1.1.1",
-    "@sparticuz/chromium": "^153.0.0",
     "@supabase/supabase-js": "^2.116.0",
     "@xmldom/xmldom": "^0.9.12",
     "docxtemplater": "^3.70.1",
@@ -22,8 +21,6 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.3.289",
     "pizzip": "^3.2.0",
-    "puppeteer": "^25.11.0",
-    "puppeteer-core": "^25.11.0",
     "react": "^19.3.0",
     "server-only": "^0.0.1"
   }

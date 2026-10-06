@@ -1,13 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { googleLogin, login } from "@dtr/identity/application/actions";
-
-function GoogleButton() {
-  const { pending } = useFormStatus();
-  return <button className="secondary-button w-full" disabled={pending}>{pending ? "Connecting…" : "Continue with Google"}</button>;
-}
+import { GoogleButton } from "./google-button";
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(login, { error: "" });

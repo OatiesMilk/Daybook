@@ -4,7 +4,7 @@ Next.js + TypeScript + Tailwind + Supabase, designed for Vercel.
 
 The app is an open multi-tenant product with self-serve email/password and Google signup, per-student data isolation, attendance CRUD/history,
 calendar navigation, configurable progress targets, profile settings, daily report revisions, reviewed DOCX/PDF imports, and private DOCX/PDF exports.
-Both formats are generated on the server (PDF via headless Chromium) and work from any device, including on Vercel.
+Both formats are generated on the server (PDF drawn on the supplied PDF template, with rows and columns sized to the content) and work from any device, including on Vercel.
 
 ## Upgrade your existing setup
 

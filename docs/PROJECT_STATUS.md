@@ -21,8 +21,8 @@
 - Ready requires completed attendance, a complete profile, and at least one complete activity row.
 - Reopening retains earlier snapshots and exports; attendance corrections flag frozen reports for review.
 - Universal filename DAR_LASTNAME_MMDDYY.docx / .pdf; revisions stored in separate private paths.
-- PDF generation runs server-side via headless Chromium, self-contained in the app's own Vercel deployment.
-  No third-party conversion service. (Supersedes the earlier local-computer-only PDF constraint.)
+- PDF generation runs server-side in Node.js by drawing on the supplied PDF template (`pdf-lib`), self-contained in the app's own Vercel deployment.
+  No browser or third-party conversion service. (Supersedes the earlier local-computer-only and headless-Chromium approaches.)
 - Report content stays inside the app's Vercel deployment and Supabase project, with two deliberate, user-approved
   exceptions that use Google Gemini: Help (one question plus public guidance) and AI drafting (only the notes the student
   types into the Draft with AI box plus the report date). Saved reports, other days' rows, attendance, and profiles are
@@ -136,11 +136,8 @@
 - Reusable DOCX derived from the user's sample; original unchanged.
 - Landscape layout, watermark, table/field styling retained. Header text normalized for LibreOffice.
 - Dynamic table rows; repeated column headings; normal activity rows kept together across pages.
-- PDF export now runs server-side (works on Vercel, from any device): a print-styled HTML view of the report
-  snapshot is rendered to PDF via headless Chromium (`puppeteer-core` + `@sparticuz/chromium` on Vercel,
-  `puppeteer`'s bundled browser locally, overridable with `CHROME_PATH`). No document leaves the app's own
-  deployment; there is no third-party conversion service. PDF is generated independently from the report
-  snapshot, not from the archived DOCX, so the two exports no longer share a conversion step.
+- PDF export runs server-side in Node.js with `pdf-lib`: the supplied `dar-template.pdf` is embedded as static artwork (watermark and headings), and the profile details and activity table are drawn over it with the bundled Noto Serif font. No browser, Word, LibreOffice, or third-party conversion service is involved, and no document leaves the app's own deployment. PDF is generated from the report snapshot, independently of the archived DOCX.
+- PDF table layout adapts per report at a fixed 10pt font: each row is exactly as tall as its wrapped text (one line = 28pt, so nine one-line activities fit per page instead of six), and column widths are planned per report. Status is sized to its header and values, and the remaining width is split between Project, Task Description, and Remarks by trying every split in 4pt steps and keeping the shortest table, so names like "Microgenesis Supply Chain Portal" stay on one line. The table keeps the template's outer edges; widths are consistent across all pages of one report. Normal rows stay together; rows taller than a page continue on later pages.
 - Private Supabase export bucket: authorized owner reads, Ready/Submitted inserts, no client overwrites/deletes.
 - Concurrent upload races return stored bytes (both formats).
 - Universal filenames independent of revision path. Downloads are optional before submission and remain available afterward.
@@ -152,7 +149,7 @@
 - Dashboard unfinished-attendance lookup fetches only the date and time needed by the view.
 - Production profiling identified region distance, not query complexity, as the main signed-in navigation cost. With Vercel functions in Washington, three measured owner checks took 434-710 ms total (466 ms median). Moving the single function region to Seoul, alongside Supabase, reduced 29 signed-in owner checks to a 57 ms median, 69 ms mean, and 146 ms p95 without weakening `getUser()` verification or the active allowlist.
 - Warm middleware claim verification is normally about 2-3 ms. Occasional cold JWKS/key-fetch outliers remain, but they do not justify weakening session verification.
-- The emitted production trace keeps Chromium/Puppeteer out of every normal page route. Normal page traces are about 1.85-2.29 MB; the isolated export route is about 71.43 MB, including roughly 66.8 MB of compressed Chromium assets.
+- An earlier production trace kept Chromium/Puppeteer out of every normal page route (normal page traces about 1.85-2.29 MB). The PDF exporter no longer uses Chromium, and since the 2026-10-06 dependency cleanup the export and import route traces contain no Chromium/Puppeteer files (trace size not re-measured).
 - Existing attendance and report primary/unique indexes match the owner/date/revision query shapes. The captured hosted attendance-history query completed in 29 ms; no additional index or caching layer is currently justified.
 
 ## Verification
@@ -172,7 +169,8 @@
 - [x] DOCX filename rules, escaping, adjustable row count, preserved images/layout.
 - [x] DOCX import round trip for all supported fields, multiline cells, ambiguous statuses, blank projects, and malformed/spoofed/oversized inputs.
 - [x] PDF header-only import with bounded worker parsing; PDF table rows deliberately remain unsupported.
-- [x] Headless-Chromium PDF export: one-page and four-page test reports generated and rendered (valid PDF, correct page counts).
+- [x] Template-based PDF export: artwork preserved, cells wrap, header repeats, activities never lost, oversized rows paginate (`tests/pdf-export.test.ts`).
+- [x] Adaptive PDF layout (2026-10-06, `tests/pdf-layout.test.ts`): nine one-line activities fit on one page, a tenth continues on page 2, a long task plus five short rows fits on one page, project names stay on one line, and table text stays inside the table edges. The test was confirmed to fail on the previous renderer. Rendered samples were reviewed visually. A realistic 20-activity report renders in about 0.26 s.
 - [x] Visual export review; fixed clipped source header label and row splitting found during review.
 - [x] Production build passes with new routes.
 - [x] Local production build includes `/signup`, `/auth/confirm`, and `/calendar`.
@@ -207,8 +205,7 @@
 14. Apply 202610060012_profile_prior_hours.sql once to enable carried-over hours. Without it, saving a profile fails with an "apply the latest profile migration" message.
 
 Do not rerun migration 001. Existing records are retained. No remote migrations or data changes were performed by the agent.
-`LIBREOFFICE_PATH` is no longer used and was removed from `apps/web/.env.example`; PDF export runs via headless Chromium instead
-(see Exports above). An optional `CHROME_PATH` env var can point at a specific local Chrome/Chromium for dev.
+`LIBREOFFICE_PATH` and `CHROME_PATH` are not used. PDF export draws on `apps/web/templates/dar-template.pdf` in Node.js (see Exports above).
 
 ## Known limits / remaining release work
 
@@ -219,10 +216,10 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Browser end-to-end validation is still required; embedded PostgreSQL is not the hosted Supabase API/storage service.
 - Import UI browser validation against an authenticated Supabase session is still required; automated browser access was unavailable locally.
 - The DOCX template has been checked in LibreOffice rendering; exact Word/LibreOffice font metrics can differ. The PDF
-  export uses its own independent HTML layout and does not depend on LibreOffice at all.
-- `@sparticuz/chromium` is isolated to the export function. Its emitted trace is about 71.43 MB, including roughly
-  66.8 MB of compressed Chromium assets; normal page traces contain no Chromium/Puppeteer references. A cold
-  production PDF export still needs runtime timing against the active Vercel timeout budget.
+  export draws its own table on the PDF template and does not depend on LibreOffice.
+- Pathological PDF exports are slow: 100 rows at the maximum allowed lengths (about 670 pages) take about 35 s with the
+  previous renderer and about 39 s with adaptive columns. Realistic reports render in well under a second.
+- PDF exports at the fixed 10pt font hold at most nine one-line activities per page; more continue on later pages.
 - ESLint 9 is retained for compatibility with the current Next.js React lint plugin.
 - Production deploys from GitHub `main`; no remote migrations were performed by the agent.
 - Open signup depends operationally on hosted Auth configuration: Confirm Email, production SMTP, password policy, Turnstile, the token-hash email template, and exact redirect URLs.
@@ -230,6 +227,12 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Google's API documentation could not be fetched from the development environment (network egress blocked), so drafting reuses Help's request format, which passed the 2026-09-29 live smoke test. Drafting itself has not been run against the live API yet.
 
 ## Change log
+
+- 2026-10-06: Removed the unused headless-Chromium dependencies (`puppeteer`, `puppeteer-core`, `@sparticuz/chromium`) from the root and `@dtr/reports` package.json files and from `serverExternalPackages` in `next.config.ts` (kept `pdfjs-dist` for the import worker). A repo-wide search confirmed no source imports them; `npm install` removed 45 packages from the lockfile. The export and import route traces contain no Chromium files. Lint, TypeScript, 51 tests, and production build pass.
+
+- 2026-10-06: PDF tables now adapt to their content at a fixed font size. Removed the 41pt minimum row height (rows fit their text), and replaced fixed column widths with a per-report plan: Status fits its header and values, and the rest is split between Project, Task Description, and Remarks to minimise table height. Nine one-line activities now fit on page 1 (previously six). Added `tests/pdf-layout.test.ts`. Corrected docs that still described a headless-Chromium PDF pipeline. Lint, TypeScript, tests, and production build pass.
+
+- 2026-10-06: Added the Google "G" mark to Continue with Google on the login and signup pages through one shared `GoogleButton` (signup previously had no pending state; it now shows Connecting… like login). The mark is decorative (`aria-hidden`), so the accessible name is unchanged. Google brand colours and the white chip on the primary signup button are intentional non-token values. Checked light/dark at 375px and 1280px in the browser; lint, TypeScript, and tests pass.
 
 - 2026-10-06: User applied migration 012 to hosted Supabase. The application code is not yet committed or deployed; live acceptance is pending.
 - 2026-10-06: Added carried-over hours and required onboarding (migration 012, `/welcome`, profile form, dashboard line). Reversed the "No opening balance" requirement with user approval. Used the frontend-design, emil-design-eng, break-ui, mobile-native, code-review, and security-review skills; fixed a cross-tenant date leak in the validation triggers, duplicate date formatters, a confusing form field name, and misleading success copy. Lint, TypeScript, 50 tests, and production build pass. No commit, push, remote migration, or deployment was performed.
