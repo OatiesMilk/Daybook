@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@dtr/shared/infrastructure/database.types";
 import type { AttendanceValues } from "../domain/rules";
+import { formatShortDate } from "@dtr/shared/domain/internship-date";
 
 type Client = SupabaseClient<Database>;
 export const HISTORY_PAGE_SIZE = 20;
@@ -58,7 +59,8 @@ export async function listAttendance(db: Client, userId: string, filters: { from
   return { rows: data ?? [], count: count ?? 0 };
 }
 
-function writeError(code: string | undefined) {
+function writeError(code: string | undefined, details?: string) {
+  if (code === "DBC01") return `These dates are already covered by your carried-over hours (up to ${details ? formatShortDate(details) : "your carried-over date"}). Choose a later date.`;
   if (code === "23505") return "An attendance record already exists on that date. Open it from history to edit.";
   if (code === "23514") return "The date or times are not allowed. Check the weekday, time order, and future date.";
   if (code === "42703" || code === "23502") return "Apply the latest attendance migration before saving this record.";
@@ -70,7 +72,7 @@ export async function saveAttendance(db: Client, userId: string, values: Attenda
     ? db.from("attendance").update(values).eq("user_id", userId).eq("work_date", original.date).eq("updated_at", original.version)
     : db.from("attendance").insert({ ...values, user_id: userId });
   const { data, error } = await query.select("work_date").maybeSingle();
-  if (error) throw new Error(writeError(error.code));
+  if (error) throw new Error(writeError(error.code, error.details));
   if (!data) throw new Error("This record changed in another tab or was deleted. Reload before editing.");
 }
 

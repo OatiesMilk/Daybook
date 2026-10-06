@@ -1,22 +1,46 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireOwner } from "./auth";
-import { getProfile, saveProfile } from "../infrastructure/profile-repository";
-import type { Profile } from "../domain/profile";
+import { CarryOverConflict, getProfile, saveProfile } from "../infrastructure/profile-repository";
+import { parseCarryOver, type Profile } from "../domain/profile";
+import { formatShortDate, internshipToday } from "@dtr/shared/domain/internship-date";
 import type { ActionState } from "@dtr/shared/contracts/action-state";
 
-export async function profileAction(_state: ActionState, form: FormData): Promise<ActionState> {
+function refresh() { for (const path of ["/settings", "/reports", "/", "/welcome"]) revalidatePath(path); }
+
+/** Server-side validation of the full profile form, shared by onboarding and the Profile page. */
+async function saveFullProfile(form: FormData) {
   const { supabase, user } = await requireOwner();
-  try {
-    const fields = Object.fromEntries(["full_name", "last_name", "school", "department"].map(key => [key, String(form.get(key) ?? "").trim()])) as Omit<Profile, "target_hours">;
-    for (const [key, value] of Object.entries(fields)) if (!value || value.length > (key === "last_name" ? 100 : 200)) throw new Error("Complete all profile fields within their length limits.");
-    const target_hours = Number(form.get("target_hours"));
-    if (!Number.isInteger(target_hours) || target_hours < 1 || target_hours > 10000) throw new Error("Required internship hours must be a whole number from 1 to 10,000.");
-    await saveProfile(supabase, user.id, { ...fields, target_hours });
-  } catch (cause) { return { error: cause instanceof Error ? cause.message : "Could not save profile." }; }
-  revalidatePath("/settings"); revalidatePath("/reports"); revalidatePath("/");
-  return { error: "", success: "Profile saved. Existing report snapshots remain unchanged." };
+  const fields = Object.fromEntries(["full_name", "last_name", "school", "department"].map(key => [key, String(form.get(key) ?? "").trim()])) as Omit<Profile, "target_hours">;
+  for (const [key, value] of Object.entries(fields)) if (!value || value.length > (key === "last_name" ? 100 : 200)) throw new Error("Complete all profile fields within their length limits.");
+  const target_hours = Number(form.get("target_hours"));
+  if (!Number.isInteger(target_hours) || target_hours < 1 || target_hours > 10000) throw new Error("Required internship hours must be a whole number from 1 to 10,000.");
+  const carryOver = parseCarryOver({
+    mode: String(form.get("carry_mode") ?? ""), hours: String(form.get("prior_hours") ?? ""), minutes: String(form.get("prior_extra_minutes") ?? ""),
+    asOf: String(form.get("prior_hours_as_of") ?? ""), note: String(form.get("prior_hours_note") ?? ""),
+  }, target_hours, internshipToday());
+  try { await saveProfile(supabase, user.id, { ...fields, target_hours }, carryOver); return carryOver; }
+  catch (cause) {
+    if (cause instanceof CarryOverConflict) throw new Error(`You already have attendance recorded on ${formatShortDate(cause.overlap)}. Choose a counted-up-to date before your first Daybook attendance, or remove those records first.`);
+    throw cause;
+  }
+}
+
+export async function profileAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  let carried: number;
+  try { carried = (await saveFullProfile(form)).prior_minutes; }
+  catch (cause) { return { error: cause instanceof Error ? cause.message : "Could not save profile." }; }
+  refresh();
+  return { error: "", success: carried > 0 ? "Profile saved. If your carried-over hours changed, Ready and Submitted reports are marked for review." : "Profile saved." };
+}
+
+export async function onboardingAction(_state: ActionState, form: FormData): Promise<ActionState> {
+  try { await saveFullProfile(form); }
+  catch (cause) { return { error: cause instanceof Error ? cause.message : "Could not save your details." }; }
+  refresh();
+  redirect("/");
 }
 
 export async function importProfileAction(_state: ActionState, form: FormData): Promise<ActionState> {

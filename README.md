@@ -21,12 +21,14 @@ Supabase SQL Editor (copy the complete contents of each file into a new query an
 8. `supabase/migrations/202609280009_open_signup_provisioning.sql`
 9. `supabase/migrations/202609280010_help_request_limits.sql`
 10. `supabase/migrations/202609300011_ai_draft_request_limits.sql`
+11. `supabase/migrations/202610060012_profile_prior_hours.sql`
 
 Do not rerun `202609180001_foundation.sql` if you already applied it. The new migrations retain existing records.
 The reports migration also creates the private `dar-exports` storage bucket and its access policies.
 Migration 005 fixes the ambiguous `owner_id` reference that prevented Ready reports from being marked Submitted in Supabase.
 Migration 006 lets you mark a Ready report Submitted without first downloading DOCX or PDF. Exports remain available afterward.
 Migration 009 enables automatic account/profile provisioning for open signup and makes each new student choose an internship target.
+Migration 012 lets students carry over hours rendered before Daybook as a self-reported starting balance. Existing profiles start at zero, so nothing changes until a student opts in.
 Migration 010 adds auth-bound Help request counters and expiring permits. It stores no conversations and changes no attendance/report records. Help fails safely unavailable until this migration is applied.
 
 Run `npm ci` to install the export dependencies, then restart with `npm run dev`.
@@ -113,7 +115,7 @@ The app flag controls the signup page and server action. It does not disable Sup
 
 Use a dedicated Supabase project for Daybook.
 
-1. Apply all eleven files in `supabase/migrations/` in filename order, once each, using the Supabase SQL editor
+1. Apply all twelve files in `supabase/migrations/` in filename order, once each, using the Supabase SQL editor
    (or your normal Supabase migration workflow). Keep subsequent changes in new migrations.
 2. In Authentication settings, enable new-user signup and **Confirm Email**. Keep anonymous sign-ins disabled. Set a minimum password length of at least 8 and the strongest practical character requirements. Enable leaked-password protection when the project plan supports it.
 3. Configure production SMTP. Supabase's built-in email sender is intended for testing and has a very low project-wide delivery limit.

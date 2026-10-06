@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./contracts/*": "./src/contracts/*.ts",
+    "./domain/*": "./src/domain/*.ts",
     "./infrastructure/*": "./src/infrastructure/*.ts",
     "./infrastructure/supabase/*": "./src/infrastructure/supabase/*.ts",
     "./ui/*": "./src/ui/*.tsx"

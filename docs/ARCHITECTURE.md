@@ -23,7 +23,12 @@ One interval per weekday, office or home. Time out is nullable, and unfinished e
 Dates cannot be in the future (Asia/Manila, UTC+8). End time must be after start on the same date.
 Regular credit is overlap with 08:30-12:00 and 13:00-18:30. Optional overtime is actual overlap after 18:30,
 including afternoon-only days. No pre-08:30 credit. All arithmetic uses integer minutes; the target is 29,160 minutes.
-There is no opening balance. The sample's 3,750 minutes through 2026-09-17 is only a reconciliation reference.
+Students who began before Daybook may record one self-reported starting balance on their profile (`prior_minutes`,
+`prior_hours_as_of`, optional note). It covers every date up to and including `prior_hours_as_of`; database triggers reject
+attendance on those dates and reject moving the date over existing attendance, so hours are never counted twice. No
+attendance rows are fabricated. `attendance_summary` and Ready snapshots add the balance; worked-day counts and the pace
+forecast stay attendance-only. Changing the balance flags Ready/Submitted reports for review. The sample's 3,750 minutes
+through 2026-09-17 is only a reconciliation reference.
 
 Insert rejects duplicates. Update/delete includes the original date, owner ID, and last-seen timestamp to reject stale edits.
 SQL-generated credits prevent inflated totals supplied by clients. History is paginated. Summary aggregation runs in PostgreSQL,

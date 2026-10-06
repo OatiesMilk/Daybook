@@ -8,9 +8,13 @@ type Profile = {
   school: string;
   department: string;
   target_hours: number | null;
+  prior_minutes: number;
+  prior_hours_as_of: string | null;
+  prior_hours_note: string;
   created_at: string;
   updated_at: string;
 };
+type ProfileFields = "full_name" | "last_name" | "school" | "department" | "target_hours" | "prior_minutes" | "prior_hours_as_of" | "prior_hours_note";
 export type Attendance = {
   user_id: string;
   work_date: string;
@@ -38,7 +42,7 @@ export type Database = {
   public: {
     Tables: {
       allowed_users: Table<{ user_id: string; active: boolean; created_at: string }, never, never>;
-      profiles: Table<Profile, Pick<Profile, "user_id"> & Partial<Pick<Profile, "full_name" | "last_name" | "school" | "department" | "target_hours">>, Partial<Pick<Profile, "full_name" | "last_name" | "school" | "department" | "target_hours">>>;
+      profiles: Table<Profile, Pick<Profile, "user_id"> & Partial<Pick<Profile, ProfileFields>>, Partial<Pick<Profile, ProfileFields>>>;
       attendance: Table<Attendance, AttendanceInsert, Partial<AttendanceInsert>>;
       reports: Table<Report, never, never>;
     };

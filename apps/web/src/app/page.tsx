@@ -6,7 +6,7 @@ import { TodayCard } from "@dtr/attendance/presentation/today-card";
 import { TodayReportSection } from "@dtr/reports/presentation/today-report";
 
 export default async function Dashboard() {
-  const { today, workday, summary, open, record, report, targetHours, estimate } = await dashboardData();
+  const { today, workday, summary, open, record, report, targetHours, carryOver, estimate } = await dashboardData();
   // Today's unfinished entry is handled by the Today card, so this list covers earlier days only.
   const pastOpen = open.rows.filter(row => row.work_date !== today);
   const pastCount = open.count - (open.rows.length - pastOpen.length);
@@ -14,12 +14,7 @@ export default async function Dashboard() {
     <WorkspaceHeader />
     <div className="page-heading dashboard-heading"><h1>Your internship at a glance</h1><p>Progress through <time dateTime={today}>{new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${today}T00:00:00Z`))}</time>. Pick up where you left off.</p></div>
     <div className="dashboard-overview">
-      {targetHours == null ? <section className="panel" aria-labelledby="target-setup-heading">
-        <span className="status" data-tone="info">First-time setup</span>
-        <h2 id="target-setup-heading" className="section-title mt-4">Set your internship target</h2>
-        <p className="muted-copy mt-2">Add the hours required by your school before tracking progress. Your attendance records stay private to your account.</p>
-        <Link href="/settings" className="primary-button mt-5">Complete profile</Link>
-      </section> : <DashboardProgress total={summary.minutes} days={summary.days} targetHours={targetHours} estimate={estimate} />}
+      <DashboardProgress total={summary.minutes} days={summary.days} targetHours={targetHours} estimate={estimate} carryOver={carryOver} />
       <TodayCard today={today} workday={workday} record={record}>
         {workday && <TodayReportSection date={today} report={report} inProgress={Boolean(record && !record.absent && !record.time_out)} absent={record?.absent ?? false} />}
         <section className="today-attendance-check" aria-label="Earlier attendance"><div>

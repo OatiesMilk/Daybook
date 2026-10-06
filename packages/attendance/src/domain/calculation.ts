@@ -1,5 +1,6 @@
 /** Local wall-clock times. No timezone conversion or fractional-hour arithmetic. */
-export const INTERNSHIP_TIME_ZONE = "Asia/Manila";
+import { INTERNSHIP_TIME_ZONE, internshipToday } from "@dtr/shared/domain/internship-date";
+export { INTERNSHIP_TIME_ZONE, internshipToday };
 
 export type AttendanceInput = {
   date: string;
@@ -46,12 +47,6 @@ export function calculateAttendance(input: AttendanceInput): AttendanceCredit {
 
 export function formatMinutes(minutes: number): string {
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-}
-
-export function internshipToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: INTERNSHIP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(now);
 }
 
 export function isWorkday(value: string): boolean {

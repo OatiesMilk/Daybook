@@ -1,8 +1,11 @@
 import { completionEstimate, formatMinutes } from "@dtr/attendance/domain/index";
+import { formatShortDate } from "@dtr/shared/domain/internship-date";
 
 const quarters = [0.25, 0.5, 0.75, 1] as const;
 
-export function DashboardProgress({ total, days, targetHours, estimate }: { total: number; days: number; targetHours: number; estimate: ReturnType<typeof completionEstimate> }) {
+type CarryOverSummary = { minutes: number; asOf: string } | null;
+
+export function DashboardProgress({ total, days, targetHours, estimate, carryOver = null }: { total: number; days: number; targetHours: number; estimate: ReturnType<typeof completionEstimate>; carryOver?: CarryOverSummary }) {
   const targetMinutes = targetHours * 60;
   const remaining = Math.max(0, targetMinutes - total);
   const percentage = Math.min(100, total / targetMinutes * 100);
@@ -16,6 +19,7 @@ export function DashboardProgress({ total, days, targetHours, estimate }: { tota
     <div className="dashboard-card-heading"><p className="text-sm font-semibold text-muted">Hours recorded</p><span className="progress-percentage">{percentage.toFixed(1)}% complete</span></div>
     <p className="metric-number dashboard-total">{formatMinutes(total)}</p>
     <p className="mt-2 text-sm text-muted">of your {targetHours}h internship target</p>
+    {carryOver && <p className="carry-summary">Includes {formatMinutes(carryOver.minutes)} carried over as of <time dateTime={carryOver.asOf}>{formatShortDate(carryOver.asOf)}</time></p>}
     <progress className="mt-6" value={Math.min(total, targetMinutes)} max={targetMinutes} aria-label={`Progress toward ${targetHours} internship hours`} />
     {/* Quarter milestones. Their hours are decorative here; the totals above and below carry the meaning. */}
     <div className="milestones" aria-hidden="true">{quarters.map(share => <span key={share} data-passed={total >= targetMinutes * share ? "true" : undefined} style={{ left: `${share * 100}%` }}>{Math.round(targetHours * share)}h</span>)}</div>

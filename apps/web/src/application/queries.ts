@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { requireOwner } from "@dtr/identity/application/auth";
 import { attendanceReminders, completionEstimate, internshipClockMinutes, internshipToday, isWorkday, reminderWindow, validateWorkday } from "@dtr/attendance/domain/index";
 import { attendanceForMonth, attendanceSummary, findAttendance, listAttendance, openAttendance, recentWorkedAttendance } from "@dtr/attendance/infrastructure/repository";
@@ -7,6 +8,7 @@ import { getReport, listAllReports, reminderReportsForRange, reportHistory, repo
 import { calendarMonthBounds, parseCalendarMonth } from "@dtr/reports/domain/calendar";
 import { getProfile } from "@dtr/identity/infrastructure/profile-repository";
 import { parsePage } from "@dtr/reports/domain/rules";
+import { isProfileComplete } from "@dtr/identity/domain/profile";
 
 const reportStatuses = ["draft", "ready", "submitted"] as const;
 /** Accepts only a real YYYY-MM-DD calendar date from the URL; anything else is ignored. */
@@ -18,12 +20,13 @@ export async function dashboardData() {
   const [summary, open, record, profile, recent, report] = await Promise.all([
     attendanceSummary(supabase, today), openAttendance(supabase, user.id),
     workday ? findAttendance(supabase, user.id, today) : Promise.resolve(null),
-    getProfile(supabase, user.id),
+    requireCompleteProfile(),
     recentWorkedAttendance(supabase, user.id, today),
     workday ? todayReport(supabase, user.id, today) : Promise.resolve(null),
   ]);
-  const targetHours = profile?.target_hours ?? null;
-  return { today, workday, summary, open, record, report, targetHours, estimate: targetHours == null ? null : completionEstimate(today, summary.minutes, targetHours, recent) };
+  const targetHours = profile.target_hours as number;
+  const carryOver = profile.prior_minutes > 0 && profile.prior_hours_as_of ? { minutes: profile.prior_minutes, asOf: profile.prior_hours_as_of } : null;
+  return { today, workday, summary, open, record, report, targetHours, carryOver, estimate: completionEstimate(today, summary.minutes, targetHours, recent) };
 }
 
 export async function notificationData() {
@@ -38,7 +41,7 @@ export async function notificationData() {
 }
 
 export async function attendanceData(requestedDate?: string) {
-  const { supabase, user } = await requireOwner();
+  const [{ supabase, user }] = await Promise.all([requireOwner(), requireCompleteProfile()]);
   const today = internshipToday(); const date = requestedDate ?? today;
   let error = "";
   try { validateWorkday(date); if (date > today) throw new Error("Choose today or an earlier weekday."); }
@@ -47,7 +50,7 @@ export async function attendanceData(requestedDate?: string) {
 }
 
 export async function historyData(params: Record<string, string | undefined>) {
-  const { supabase, user } = await requireOwner();
+  const [{ supabase, user }] = await Promise.all([requireOwner(), requireCompleteProfile()]);
   const validDate = parseIsoDate;
   const page = Math.min(10000, Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1));
   const filters = { from: validDate(params.from), to: validDate(params.to), location: params.location, state: params.state, page };
@@ -55,7 +58,7 @@ export async function historyData(params: Record<string, string | undefined>) {
 }
 
 export async function reportsData(params: { date?: string; id?: string; page?: string }) {
-  const { supabase, user } = await requireOwner();
+  const [{ supabase, user }] = await Promise.all([requireOwner(), requireCompleteProfile()]);
   const page = Math.max(1, Math.min(10000, Number.parseInt(params.page ?? "1", 10) || 1));
   const selected = params.id && /^[0-9a-f-]{36}$/i.test(params.id) ? await getReport(supabase, user.id, params.id) : null;
   const date = selected?.report_date ?? params.date ?? internshipToday();
@@ -70,7 +73,7 @@ export async function reportsData(params: { date?: string; id?: string; page?: s
 }
 
 export async function allReportsData(params: { page?: string; from?: string; to?: string; status?: string }) {
-  const { supabase, user } = await requireOwner();
+  const [{ supabase, user }] = await Promise.all([requireOwner(), requireCompleteProfile()]);
   const page = parsePage(params.page);
   const filters: AllReportsFilters = { from: parseIsoDate(params.from), to: parseIsoDate(params.to), status: reportStatuses.find(s => s === params.status) };
   if (filters.from && filters.to && filters.from > filters.to) return { page, filters, error: "The From date must be on or before the To date.", reports: [], count: 0, retryable: false };
@@ -79,7 +82,7 @@ export async function allReportsData(params: { page?: string; from?: string; to?
 }
 
 export async function calendarData(requestedMonth?: string) {
-  const { supabase, user } = await requireOwner();
+  const [{ supabase, user }] = await Promise.all([requireOwner(), requireCompleteProfile()]);
   const today = internshipToday();
   const month = parseCalendarMonth(requestedMonth, today);
   const { from, to } = calendarMonthBounds(month);
@@ -95,6 +98,16 @@ export const profileData = cache(async function profileData() {
   const { supabase, user } = await requireOwner();
   return getProfile(supabase, user.id);
 });
+
+/**
+ * Sends students with an incomplete profile to onboarding before workspace pages.
+ * This is navigation only: RLS and server-side validation protect the data itself.
+ */
+export async function requireCompleteProfile() {
+  const profile = await profileData();
+  if (!profile || !isProfileComplete(profile)) redirect("/welcome");
+  return profile;
+}
 
 export async function accountData() {
   const [{ user }, profile] = await Promise.all([requireOwner(), profileData()]);

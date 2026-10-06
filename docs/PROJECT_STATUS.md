@@ -1,7 +1,7 @@
 # Project Status
 
 **Project:** Daybook - multi-tenant internship attendance and Daily Activity Reports
-**Last updated:** 2026-10-05
+**Last updated:** 2026-10-06
 **Current phase:** Open-signup and calendar implementation complete locally; hosted migration/configuration and live acceptance pending
 **Current signup rollout:** Google registration; email registration disabled by default until SMTP is available. Existing password sign-in remains available.
 **Deployment:** Vercel production in Seoul (`icn1`), colocated with Supabase Seoul (`ap-northeast-2`)
@@ -13,7 +13,8 @@
 - One time-in/time-out pair per weekday; office/WFH; no overnight work or future attendance dates.
 - Save time in alone, then complete time out. Open entries earn no hours.
 - Regular credit: overlap with 08:30-12:00 and 13:00-18:30. Optional overtime counts actual work after 18:30.
-- Configurable per-user internship target, required during first-time profile setup. No opening balance. Historical records are entered individually.
+- Configurable per-user internship target, required during first-time onboarding (`/welcome`).
+- **Decision changed 2026-10-06 (user-approved):** students continuing an internship may carry over hours rendered before Daybook as one self-reported starting balance with a counted-up-to date. This replaces the earlier "No opening balance" rule. Attendance on or before that date is blocked so hours are never counted twice; no attendance rows are fabricated; no admin approval.
 - Sample reconciliation: 62h 30m through September 17, 2026.
 - Date/time corrections allowed; duplicate dates rejected; deletion requires confirmation.
 - One DAR per date with revisions; Draft -> Ready -> Submitted.
@@ -28,6 +29,16 @@
   never sent. Emails, phone numbers, and credentials are blocked before sending. Approved 2026-09-30.
 
 ## Implemented
+
+### Carried-over hours and required onboarding
+
+- New students are sent to `/welcome` until name, last name, school, department, and required hours are complete, then choose **Starting fresh** or **Continuing an internship** (hours + minutes, counted-up-to date, optional 300-character note). The same fields are editable on the Profile page. The redirect is navigation only; RLS and server-side validation protect data.
+- Migration 012 adds `prior_minutes`, `prior_hours_as_of`, and `prior_hours_note` to `profiles`, with constraints: 0 to 600,000 minutes, date required exactly when minutes > 0, balance <= target, note <= 300 chars. Existing profiles default to zero.
+- Database triggers (SECURITY INVOKER, so they see only the caller's rows under RLS) reject attendance or absences on covered dates (`DBC01`), future counted-up-to dates, and moving the date over existing attendance (`DBC02`). They run after the per-owner lock, so concurrent profile/attendance writes are serialized.
+- `attendance_summary` and Ready snapshots in `report_command` add the balance once its covered period is reached, so dashboard totals, remaining hours, Draft downloads, and Ready/Submitted DOCX/PDF exports include it. Worked days, daily average, and completion pace stay attendance-only. Changing the balance flags Ready/Submitted reports for review.
+- Dashboard shows "Includes Xh carried over as of <date>". The soft first-time target card was replaced by the required onboarding step.
+- Consequence accepted by the user: reports cannot be marked Ready for covered dates, because Ready requires completed attendance on that date.
+- `internshipToday`/`INTERNSHIP_TIME_ZONE` moved to `@dtr/shared/domain/internship-date` (re-exported by attendance) to avoid an identity↔attendance package cycle; a shared `formatShortDate` replaces three duplicate formatters.
 
 ### Popup design refinement
 
@@ -149,6 +160,9 @@
 - [x] ESLint without errors or warnings.
 - [x] TypeScript.
 - [x] `npm run check` on 2026-09-30: 40 tests pass. Help coverage is limited to `tests/help.test.ts` (Draft with AI answers, write-request redirects, retained refusals); the Help endpoint, quota, and scope tests described in earlier entries are not present in the repository and should be restored. Other coverage includes today's report status/action/activity-count rules, reminder preferences and DAR lifecycle, completion forecast boundaries, reminder window/exclusions, provisioning/suspension, cross-user RLS, calendar summaries, Draft previews, monorepo boundaries, report-import safety, all-reports behavior, and AI drafting: input filters, strict output validation, merge rules, mocked Gemini client failures, and the drafting limiter SQL).
+- [x] `npm run check` on 2026-10-06: 50 tests pass, including `tests/carry-over.test.ts` (validation bounds, totals = balance + attendance, covered-date rejection for attendance/absences/moves, date-move conflict, Ready snapshot totals, review flagging, starting-fresh reset, cross-user isolation and no cross-tenant date leakage through trigger errors). The leak test was confirmed to fail against the earlier SECURITY DEFINER trigger version. Production build passes with `/welcome`.
+- [x] Carried-over UI stress-tested with worst-case data (200-character names/school/department, 300-character note with URL/email/emoji/non-Latin text, 10,000h target, 1-minute balance) at 320px in a temporary dev-only harness (since removed). No horizontal overflow; the dashboard date was fixed to stay on one line. Code review and security review run; a cross-tenant leak via SECURITY DEFINER validation triggers was found and fixed.
+- [ ] Apply migration 012 to hosted Supabase, then live-test onboarding (fresh and continuing), a covered-date attendance rejection, and a Ready export total. Real-phone review of the onboarding form pending.
 - [ ] Apply migration 011 to hosted Supabase, then run a live Draft with AI smoke test with a real key and review the panel on desktop and a real phone (no authenticated browser session was available to automation).
 - [x] Migration chain executes in embedded PostgreSQL (PGlite), using auth/storage stubs.
 - [x] Calculation boundaries, half-days, lunch, overtime, incomplete attendance, future dates, duplicates.
@@ -189,12 +203,17 @@
 11. Sign up, confirm email, complete Profile, add real attendance, save a report, mark Ready, then confirm submission. Export whenever needed.
 12. Apply 202609280010_help_request_limits.sql once before using Daybook Help. Set the optional server-only GEMINI_API_KEY in local/Vercel environments for Gemini answers, or use FAQ-only mode. Help fails unavailable until the shared limiter is present.
 13. Apply 202609300011_ai_draft_request_limits.sql once before using Draft with AI. It uses the same GEMINI_API_KEY; without the key the panel is hidden, and without the migration drafting fails closed with an unavailable message.
+14. Apply 202610060012_profile_prior_hours.sql once to enable carried-over hours. Without it, saving a profile fails with an "apply the latest profile migration" message.
 
 Do not rerun migration 001. Existing records are retained. No remote migrations or data changes were performed by the agent.
 `LIBREOFFICE_PATH` is no longer used and was removed from `apps/web/.env.example`; PDF export runs via headless Chromium instead
 (see Exports above). An optional `CHROME_PATH` env var can point at a specific local Chrome/Chromium for dev.
 
 ## Known limits / remaining release work
+
+- Carried-over hours are self-reported and unverified by design; reports and exports show the cumulative total without marking which part was carried over.
+- Draft reports can still be saved for covered dates, but cannot become Ready. Their download preview total excludes the balance, because the balance applies only after its counted-up-to date.
+- Dashboard quarter milestone labels can collide at 320px with four- or five-digit targets (pre-existing, not introduced here).
 
 - Browser end-to-end validation is still required; embedded PostgreSQL is not the hosted Supabase API/storage service.
 - Import UI browser validation against an authenticated Supabase session is still required; automated browser access was unavailable locally.
@@ -210,6 +229,8 @@ Do not rerun migration 001. Existing records are retained. No remote migrations 
 - Google's API documentation could not be fetched from the development environment (network egress blocked), so drafting reuses Help's request format, which passed the 2026-09-29 live smoke test. Drafting itself has not been run against the live API yet.
 
 ## Change log
+
+- 2026-10-06: Added carried-over hours and required onboarding (migration 012, `/welcome`, profile form, dashboard line). Reversed the "No opening balance" requirement with user approval. Used the frontend-design, emil-design-eng, break-ui, mobile-native, code-review, and security-review skills; fixed a cross-tenant date leak in the validation triggers, duplicate date formatters, a confusing form field name, and misleading success copy. Lint, TypeScript, 50 tests, and production build pass. No commit, push, remote migration, or deployment was performed.
 
 - 2026-09-30: Added a favicon matching the brand mark (white vector "D" on the indigo rounded square): `app/icon.svg`, a 180×180 `app/apple-icon.png` for iPhone home screens, and a 16/32/48 px `app/favicon.ico` fallback, all picked up by Next.js file conventions with no config or dependency. Checked legible at 16 px on light and dark tab bars; middleware already skips these paths.
 
