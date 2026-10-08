@@ -20,7 +20,7 @@
 - One DAR per date with revisions; Draft -> Ready -> Submitted.
 - Ready requires completed attendance, a complete profile, and at least one complete activity row.
 - Reopening retains earlier snapshots and exports; attendance corrections flag frozen reports for review.
-- Universal filename DAR_LASTNAME_MMDDYY.docx / .pdf; revisions stored in separate private paths.
+- Universal filename DAR_LASTNAME_MMDDYYYY.docx / .pdf; revisions stored in separate private paths.
 - PDF generation runs server-side in Node.js by drawing on the supplied PDF template (`pdf-lib`), self-contained in the app's own Vercel deployment.
   No browser or third-party conversion service. (Supersedes the earlier local-computer-only and headless-Chromium approaches.)
 - Report content stays inside the app's Vercel deployment and Supabase project, with two deliberate, user-approved

@@ -33,7 +33,7 @@ test("PDF template exports preserve artwork, wrap cells and paginate without los
         text += pageText;
       }
       for (let i = 0; i < count; i++) if (!text.includes('Activity ' + i + ':')) throw Error('Lost activity ' + i);
-      if (!text.includes('62 hours and 30 mins')) throw Error('Lost total');
+      if (!text.includes('62 Hours and 30 Mins')) throw Error('Lost total');
       outputs.push({ count, pages: pdf.numPages });
       await loading.destroy();
     }

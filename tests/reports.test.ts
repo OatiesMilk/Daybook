@@ -10,8 +10,8 @@ import { calendarGrid, calendarMonthBounds, latestReportPerDate, parseCalendarMo
 test("universal filenames, safe rows, and sample-based DOCX layout", async () => {
   assert.equal(formatReportDate("2026-09-23"), "September 23, 2026");
   assert.equal(formatReportDate("not-a-date"), "not-a-date");
-  assert.equal(reportFilename("Akia", "2026-09-17", "docx"), "DAR_AKIA_091726.docx");
-  assert.equal(reportFilename("De la Cruz", "2026-01-02", "pdf"), "DAR_DE_LA_CRUZ_010226.pdf");
+  assert.equal(reportFilename("Akia", "2026-09-17", "docx"), "DAR_AKIA_09172026.docx");
+  assert.equal(reportFilename("De la Cruz", "2026-01-02", "pdf"), "DAR_DE_LA_CRUZ_01022026.pdf");
   assert.throws(() => reportFilename("../", "2026-01-02", "docx"));
   assert.throws(() => validateRows([{ project: "P", task: "T", status: "Invalid", remarks: "" }]));
   const template = await readFile(new URL("../apps/web/templates/dar-template.docx", import.meta.url));
@@ -19,7 +19,7 @@ test("universal filenames, safe rows, and sample-based DOCX layout", async () =>
   const buffer = renderDar(template, { profile: { full_name: "Example Intern", last_name: "Intern", school: "Example School", department: "IT", target_hours: 486 }, date: "2026-09-17", totalMinutes: 3750, rows });
   const original = new PizZip(template); const result = new PizZip(buffer);
   const xml = result.file("word/document.xml")!.asText();
-  assert.match(xml, /62 hours and 30 mins/); assert.match(xml, /09\/17\/2026/);
+  assert.match(xml, /62 Hours and 30 Mins/); assert.match(xml, /09\/17\/2026/);
   assert.match(xml, /Task &amp; &lt;safe&gt;/); assert.match(xml, /Project 11/);
   assert.doesNotMatch(xml, /Dylan|Akia|Microgenesis|\{#activities\}/);
   assert.match(xml, /w:orient="landscape"/);

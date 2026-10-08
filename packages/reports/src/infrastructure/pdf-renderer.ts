@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFArray, PDFDocument, PDFRawStream, decodePDFRawStream, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import type { ReportSnapshot } from "../domain/rules.ts";
+import { formatReportHours, type ReportSnapshot } from "../domain/rules.ts";
 
 // Coordinates match the supplied landscape-letter DAR v2 template, in PDF points.
 // Only the table's outer edges are fixed; column widths are planned per report.
@@ -162,7 +162,7 @@ export async function renderReportPdf(snapshot: ReportSnapshot, templateBytes?: 
   }
   const background = await doc.embedPage(source);
   const date = `${snapshot.date.slice(5, 7)}/${snapshot.date.slice(8, 10)}/${snapshot.date.slice(0, 4)}`;
-  const hours = `${Math.floor(snapshot.totalMinutes / 60)} hours and ${snapshot.totalMinutes % 60} mins`;
+  const hours = formatReportHours(snapshot.totalMinutes);
   const navy = rgb(0.0902, 0.212, 0.361);
   const edges = planColumns(snapshot.rows, font);
   function newPage() {

@@ -16,7 +16,7 @@ for (const name of ["short", "long"]) {
     await writeFile(new URL(`../.data/exports-qa/${name}-${i}.png`, import.meta.url), canvas.toBuffer("image/png"));
     allText += (await page.getTextContent()).items.map(item => item.str ?? "").join(" ");
   }
-  if (!allText.includes("62 hours and 30 mins") || !allText.includes(name === "long" ? "Activity 18" : "Activity 3")) throw new Error("PDF content verification failed");
+  if (!allText.includes("62 Hours and 30 Mins") || !allText.includes(name === "long" ? "Activity 18" : "Activity 3")) throw new Error("PDF content verification failed");
   console.log(`${name}: ${pdf.numPages} pages rendered; cumulative total and last activity verified`);
   await loading.destroy();
 }

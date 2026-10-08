@@ -48,7 +48,7 @@ date, activity fields, prerequisites, and allowed transition. Per-owner database
 - Reopen: create the next Draft revision while retaining earlier snapshots/files.
 - Attendance corrections: flag affected frozen reports for review. Their snapshots and exports stay unchanged.
 
-Exports use `DAR_LASTNAME_MMDDYY` with the format extension. Private object paths are `owner UUID/report UUID/report.docx` or `.pdf`.
+Exports use `DAR_LASTNAME_MMDDYYYY` with the format extension. Private object paths are `owner UUID/report UUID/report.docx` or `.pdf`.
 Storage RLS authorizes owner reads and Ready-report inserts, with no client update/delete policy. Draft previews bypass storage and are regenerated from the saved Draft. DOCX is rendered from the DOCX
 template; PDF is rendered independently from the same snapshot or preview, so the two formats never need to agree byte-for-byte.
 Concurrent export requests return the winning archived bytes.

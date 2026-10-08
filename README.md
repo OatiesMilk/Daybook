@@ -50,7 +50,7 @@ Your existing Supabase values were preserved. Never commit `apps/web/.env.local`
 11. Tap the header bell for a reminder popup (desktop) or bottom sheet (mobile), with a count of enabled, undismissed reminders. The panel includes actions, dismiss/restore controls, and expandable preferences. It opens only when requested and closes with Close, Escape, or an outside click. Reminders cover the last 30 days. Today's time-out and DAR reminders start at **6:20 PM Philippine time**, ten minutes before standard 6:30 PM time out. DAR reminders continue through Draft/Ready until you send the report and mark it Submitted; reports needing review remain flagged. Completed attendance can prompt DAR earlier. Data refreshes every minute while the app is visible and on opening the panel. Preferences/dismissals are account-scoped in this browser only; no email, push delivery, or automatic report submission is enabled. Old `/notifications` bookmarks redirect Home.
 
 Attendance changes flag Ready/Submitted reports on or after the affected date for review.
-Universal filenames are `DAR_LASTNAME_MMDDYY.docx` and `.pdf`, for example `DAR_AKIA_091726.docx`.
+Universal filenames are `DAR_LASTNAME_MMDDYYYY.docx` and `.pdf`, for example `DAR_AKIA_09172026.docx`.
 Revisions use separate storage directories, not filename suffixes.
 
 ## Daybook Help

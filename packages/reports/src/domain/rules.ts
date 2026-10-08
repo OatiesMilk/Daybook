@@ -49,5 +49,10 @@ export function buildReportSnapshot(profile: Profile | null, date: string, total
 export function reportFilename(lastName: string, date: string, format: "docx" | "pdf") {
   const surname = lastName.trim().normalize("NFKC").replace(/[^\p{L}\p{N}_-]+/gu, "_").replace(/^_+|_+$/g, "").toUpperCase();
   if (!surname || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Set a valid last name and report date.");
-  return `DAR_${surname}_${date.slice(5, 7)}${date.slice(8, 10)}${date.slice(2, 4)}.${format}`;
+  return `DAR_${surname}_${date.slice(5, 7)}${date.slice(8, 10)}${date.slice(0, 4)}.${format}`;
+}
+
+export function formatReportHours(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60); const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours} Hours` : `${hours} Hours and ${minutes} Mins`;
 }
